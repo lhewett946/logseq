@@ -557,6 +557,7 @@
 (defonce *link-dist (atom 70))
 (defonce *charge-strength (atom -600))
 (defonce *charge-range (atom 600))
+(defonce *link-strength (atom 10))
 
 (rum/defcs simulation-switch < rum/reactive
   [state]
@@ -577,7 +578,7 @@
   [graph settings forcesettings n-hops]
   (let [{:keys [journal? orphan-pages? builtin-pages? excluded-pages?]
          :or {orphan-pages? true}} settings
-        {:keys [link-dist charge-strength charge-range]} forcesettings
+        {:keys [link-dist charge-strength charge-range link-strength]} forcesettings
         journal?' (rum/react *journal?)
         orphan-pages?' (rum/react *orphan-pages?)
         builtin-pages?' (rum/react *builtin-pages?)
@@ -585,6 +586,7 @@
         link-dist'  (rum/react *link-dist)
         charge-strength'  (rum/react *charge-strength)
         charge-range'  (rum/react *charge-range)
+        link-strength' (rum/react *link-strength)
         journal? (if (nil? journal?') journal? journal?')
         orphan-pages? (if (nil? orphan-pages?') orphan-pages? orphan-pages?')
         builtin-pages? (if (nil? builtin-pages?') builtin-pages? builtin-pages?')
@@ -592,6 +594,7 @@
         link-dist (if (nil? link-dist') link-dist link-dist')
         charge-strength (if (nil? charge-strength') charge-strength charge-strength')
         charge-range (if (nil? charge-range') charge-range charge-range')
+        link-strength (if (nil? link-strength') link-strength link-strength')
         set-setting! (fn [key value]
                        (let [new-settings (assoc settings key value)]
                          (config-handler/set-config! :graph/settings new-settings)))
@@ -749,11 +752,23 @@
                                                    (reset! *charge-range (* value 100))
                                                    (set-forcesetting! :charge-range (* value 100)))}))]
 
+              [:div.flex.flex-col.mb-2
+               [:p {:title "Link Strength"}
+                "Link Strength"]
+               (ui/tippy {:html [:div.pr-3 link-strength]}
+                         (ui/slider (/ link-strength 1)
+                                    {:min 1    ;;0.05
+                                     :max 20   ;;1
+                                     :on-change #(let [value (int %)]
+                                                   (reset! *link-strength (* value))
+                                                   (set-forcesetting! :link-strength (* value)))}))]
+
               [:a.opacity-70.opacity-100 {:on-click (fn []
                                                       (swap! *graph-forcereset? not)
                                                       (reset! *link-dist 70)
                                                       (reset! *charge-strength -600)
-                                                      (reset! *charge-range 600))}
+                                                      (reset! *charge-range 600)
+                                                      (reset! *link-strength 10))}
                "Reset Forces"]]]))
          {})
         (graph-filter-section
@@ -792,6 +807,7 @@
         link-dist (rum/react *link-dist)
         charge-strength (rum/react *charge-strength)
         charge-range (rum/react *charge-range)
+        link-strength (rum/react *link-strength)
         reset? (rum/react *graph-reset?)
         forcereset? (rum/react *graph-forcereset?)
         focus-nodes (when n-hops (rum/react *focus-nodes))
@@ -815,6 +831,7 @@
                       :link-dist link-dist
                       :charge-strength charge-strength
                       :charge-range charge-range
+                      :link-strength link-strength
                       :register-handlers-fn
                       (fn [graph]
                         (graph-register-handlers graph *focus-nodes *n-hops dark?))
