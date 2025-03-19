@@ -18,18 +18,22 @@
   [dark? current-page page-links tags nodes namespaces]
   (let [parents (set (map last namespaces))
         current-page (or current-page "")
-        pages (set (flatten nodes))]
+        pages (set (flatten nodes))
+        color-settings (state/graph-color-settings)]
     (->>
      pages
      (remove nil?)
      (mapv (fn [p]
              (let [p (str p)
                    current-page? (= p current-page)
-                   color (case [dark? current-page?] ; FIXME: Put it into CSS
-                           [false false] "#999"
-                           [false true]  "#045591"
-                           [true false]  "#93a1a1"
-                           [true true]   "#ffffff")
+                   properties (db/get-page-properties p)
+                   color-type (get properties (state/graph-color-property))
+                   color (get color-settings color-type)
+                   color (if current-page?
+                           (if dark? "#ffffff" "#045591")
+                           (if (nil? color)
+                             (if dark? "#93a1a1" "#999")
+                             color))
                    color (if (contains? tags p)
                            (if dark? "orange" "green")
                            color)
