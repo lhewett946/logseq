@@ -298,6 +298,11 @@
  ;;  :charge-strength -600   ; Default value: -600
  ;;  :charge-range    600}   ; Default value: 600
 
+ ;; :graph/color-property :type ; use the type property to set the graph node colors
+ ;; :graph/color-settings
+ ;; {<property value> <color code>
+ ;;   article #ff0000 }
+ 
  ;; Favorites to list on the left sidebar
  :favorites []
 
