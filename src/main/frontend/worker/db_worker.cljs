@@ -27,7 +27,8 @@
             [frontend.worker.rtc.db-listener]
             [frontend.worker.search :as search]
             [frontend.worker.shared-service :as shared-service]
-            [frontend.worker.state :as worker-state]
+            [frontend.worker.state :as worker-state] ;; [frontend.worker.undo-redo :as undo-redo]
+            [frontend.worker.undo-redo2 :as undo-redo]
             [frontend.worker.util :as worker-util]
             [goog.object :as gobj]
             [lambdaisland.glogi.console :as glogi-console]
@@ -877,35 +878,19 @@
 (defn init
   "web worker entry"
   []
-  (let [proxy-object (->>
-                      fns
-                      (map
-                       (fn [[k f]]
-                         [k
-                          (fn [& args]
-                            (let [[_graph service] @*service
-                                  method-k (keyword (first args))]
-                              (cond
-                                (= :thread-api/create-or-open-db method-k)
-                                ;; because shared-service operates at the graph level,
-                                ;; creating a new database or switching to another one requires re-initializing the service.
-                                (let [[graph opts] (ldb/read-transit-str (last args))]
-                                  (if (:import-type opts)
-                                    (start-db! graph opts)
-                                    (p/let [service (<init-service! graph)]
-                                      (get-in service [:status :ready])
-                                      ;; wait for service ready
-                                      (js-invoke (:proxy service) k args))))
-
-                                (or (contains? #{:thread-api/sync-app-state} method-k)
-                                    (nil? service))
-                                ;; only proceed down this branch before shared-service is initialized
-                                (apply f args)
-
-                                :else
-                                ;; ensure service is ready
-                                (p/let [_ready-value (get-in service [:status :ready])]
-                                  (js-invoke (:proxy service) k args)))))]))
+  (let [fns {"remoteInvoke" thread-api/remote-function}
+        service (shared-service/create-service "graph"
+                                               (bean/->js fns)
+                                               {:on-provider-change
+                                                (fn [_client-id provider?]
+                                                  (prn :debug :provider-changed
+                                                       :provider? provider?))})
+        proxy-object (->>
+                      (map (fn [k]
+                             [k (fn [& args]
+                                  ;; ensure service is ready
+                                  (p/let [_ready-value @(get-in service [:status :ready])]
+                                    (js-invoke (:proxy service) k args)))]) (keys fns))
                       (into {})
                       bean/->js)]
     (glogi-console/install!)
