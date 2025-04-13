@@ -466,11 +466,6 @@
   (reset! worker-state/*rtc-ws-url rtc-ws-url)
   (init-sqlite-module!))
 
-;; [graph service]
-(defonce *service (atom []))
-(defonce fns {"remoteInvoke" thread-api/remote-function})
-(declare <init-service!)
-
 (defn- start-db!
   [repo {:keys [close-other-db?]
          :or {close-other-db? true}
@@ -478,8 +473,7 @@
   (p/do!
    (when close-other-db?
      (close-other-dbs! repo))
-   (when @shared-service/*master-client?
-     (create-or-open-db! repo (dissoc opts :close-other-db?)))
+   (create-or-open-db! repo (dissoc opts :close-other-db?))
    nil))
 
 (def-thread-api :thread-api/create-or-open-db
@@ -841,39 +835,12 @@
              (file/write-files! conn col (worker-state/get-context)))
            (js/console.error (str "DB is not found for " repo))))))))
 
-(defn- on-become-master
-  [repo]
-  (js/Promise.
-   (m/sp
-     (c.m/<? (init-sqlite-module!))
-     (c.m/<? (start-db! repo {}))
-     (assert (some? (worker-state/get-datascript-conn repo)))
-     (m/? (rtc.core/new-task--rtc-start true)))))
-
-(def broadcast-data-types
-  (set (map
-        common-util/keyword->string
-        [:sync-db-changes
-         :notification
-         :log
-         :add-repo
-         :rtc-log
-         :rtc-sync-state])))
-
-(defn- <init-service!
-  [graph]
-  (let [[prev-graph service] @*service]
-    (some-> prev-graph close-db!)
-    (when graph
-      (if (= graph prev-graph)
-        service
-        (p/let [service (shared-service/<create-service graph
-                                                        (bean/->js fns)
-                                                        #(on-become-master graph)
-                                                        broadcast-data-types)]
-          (assert (p/promise? (get-in service [:status :ready])))
-          (reset! *service [graph service])
-          service)))))
+(defn on-become-provider
+  []
+  (p/do!
+   (init-sqlite-module!)
+   (when-let [repo (worker-state/get-current-repo)]
+     (start-db! repo {}))))
 
 (defn init
   "web worker entry"
@@ -881,16 +848,16 @@
   (let [fns {"remoteInvoke" thread-api/remote-function}
         service (shared-service/create-service "graph"
                                                (bean/->js fns)
-                                               {:on-provider-change
-                                                (fn [_client-id provider?]
-                                                  (prn :debug :provider-changed
-                                                       :provider? provider?))})
+                                               {:on-provider-change on-become-provider})
         proxy-object (->>
-                      (map (fn [k]
+                      (map (fn [[k f]]
                              [k (fn [& args]
-                                  ;; ensure service is ready
-                                  (p/let [_ready-value @(get-in service [:status :ready])]
-                                    (js-invoke (:proxy service) k args)))]) (keys fns))
+                                  ;; what about undo and redo?
+                                  (if (contains? #{:thread-api/sync-app-state :thread-api/sync-ui-state :thread-api/record-editor-info} (keyword (first args)))
+                                    (apply f args)
+                                    ;; ensure service is ready
+                                    (p/let [_ready-value @(get-in service [:status :ready])]
+                                      (js-invoke (:proxy service) k args))))]) fns)
                       (into {})
                       bean/->js)]
     (glogi-console/install!)
