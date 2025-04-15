@@ -4,6 +4,7 @@
   (:require [borkdude.rewrite-edn :as rewrite]
             [cljs-bean.core :as bean]
             [clojure.string :as string]
+            [datascript.core :as d]
             [electron.ipc :as ipc]
             [frontend.config :as config]
             [frontend.date :as date]
