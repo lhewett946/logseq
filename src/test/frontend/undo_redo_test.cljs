@@ -6,8 +6,7 @@
             [frontend.state :as state]
             [frontend.test.fixtures :as fixtures]
             [frontend.test.helper :as test-helper]
-            [frontend.undo-redo :as undo-redo]
-            [frontend.worker.db-listener :as worker-db-listener]))
+            [frontend.undo-redo :as undo-redo]))
 
 ;; TODO: random property ops test
 
@@ -22,8 +21,8 @@
   [f]
   (let [test-db-conn (db/get-db test-db false)]
     (assert (some? test-db-conn))
-    (worker-db-listener/listen-db-changes! test-db test-db-conn
-                                           {:handler-keys [:gen-undo-ops]})
+    (undo-redo/listen-db-changes! test-db test-db-conn)
+
     (f)
     (d/unlisten! test-db-conn :frontend.worker.db-listener/listen-db-changes!)))
 
