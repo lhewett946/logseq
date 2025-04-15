@@ -737,16 +737,6 @@
   (when-let [conn (worker-state/get-datascript-conn repo)]
     (worker-export/get-all-page->content repo @conn)))
 
-;; (def-thread-api :thread-api/undo
-;;   [repo _page-block-uuid-str]
-;;   (when-let [conn (worker-state/get-datascript-conn repo)]
-;;     (undo-redo/undo repo conn)))
-
-;; (def-thread-api :thread-api/redo
-;;   [repo _page-block-uuid-str]
-;;   (when-let [conn (worker-state/get-datascript-conn repo)]
-;;     (undo-redo/redo repo conn)))
-
 (def-thread-api :thread-api/validate-db
   [repo]
   (when-let [conn (worker-state/get-datascript-conn repo)]
@@ -881,7 +871,6 @@
                              [k (fn [& args]
                                   (let [[_graph service] @*service
                                         method-k (keyword (first args))]
-                                    ;; what about undo and redo?
                                     (cond
                                       (or (contains? #{:thread-api/init-shared-service :thread-api/sync-app-state} method-k)
                                           (nil? service)
