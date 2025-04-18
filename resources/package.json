@@ -43,7 +43,8 @@
     "posthog-js": "1.10.2",
     "semver": "7.5.2",
     "socks-proxy-agent": "8.0.2",
-    "update-electron-app": "2.0.1"
+    "update-electron-app": "2.0.1",
+    "electron-devtools-installer": "^3.2.0"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.3.1",
@@ -56,8 +57,7 @@
     "@electron/rebuild": "3.2.10",
     "electron": "35.0.1",
     "electron-builder": "25.1.8",
-    "electron-forge-maker-appimage": "https://github.com/logseq/electron-forge-maker-appimage.git",
-    "electron-devtools-installer": "^3.2.0"
+    "electron-forge-maker-appimage": "https://github.com/logseq/electron-forge-maker-appimage.git"
   },
   "resolutions": {
     "**/electron": "35.0.1",
