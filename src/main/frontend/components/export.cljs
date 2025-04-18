@@ -118,7 +118,10 @@
           [:div
            [:a.font-medium {:on-click #(export/download-repo-as-html! current-repo)}
             (t :export-public-pages)]])
-
+        (when-not (mobile-util/native-platform?)
+          [:div
+           [:a.font-medium {:on-click #(export-text/export-repo-as-markdown! current-repo)}
+            (t :export-markdown)]])
         (when-not (or (mobile-util/native-platform?) db-based?)
           [:div
            [:a.font-medium {:on-click #(export-opml/export-repo-as-opml! current-repo)}
