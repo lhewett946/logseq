@@ -15,11 +15,10 @@
        links))
 
 (defn- build-nodes
-  [dark? current-page page-links tags nodes namespaces]
+  [dark? current-page page-links tags nodes namespaces color-property color-settings]
   (let [parents (set (map last namespaces))
         current-page (or current-page "")
-        pages (set (flatten nodes))
-        color-settings (state/graph-color-settings)]
+        pages (set (flatten nodes))]
     (->>
      pages
      (remove nil?)
@@ -27,7 +26,7 @@
              (let [p (str p)
                    current-page? (= p current-page)
                    properties (db/get-page-properties p)
-                   color-type (get properties (state/graph-color-property))
+                   color-type (get properties color-property)
                    color (get color-settings color-type)
                    color (if current-page?
                            (if dark? "#ffffff" "#045591")
@@ -86,7 +85,7 @@
      :links links}))
 
 (defn build-global-graph
-  [theme {:keys [journal? orphan-pages? builtin-pages? excluded-pages?]}]
+  [theme {:keys [journal? orphan-pages? builtin-pages? excluded-pages?]} color-property color-settings]
   (let [dark? (= "dark" theme)
         current-page (or (:block/name (db/get-current-page)) "")]
     (when-let [repo (state/get-current-repo)]
@@ -118,14 +117,14 @@
             page-links (reduce (fn [m [k v]] (-> (update m k inc)
                                                  (update v inc))) {} links)
             links (build-links (remove (fn [[_ to]] (nil? to)) links))
-            nodes (build-nodes dark? (string/lower-case current-page) page-links tags nodes namespaces)]
+            nodes (build-nodes dark? (string/lower-case current-page) page-links tags nodes namespaces color-property color-settings)]
         (normalize-page-name
          {:nodes nodes
           :links links
           :page-name->original-name page-name->original-name})))))
 
 (defn build-page-graph
-  [page theme show-journal]
+  [page theme show-journal color-property color-settings]
   (let [dark? (= "dark" theme)]
     (when-let [repo (state/get-current-repo)]
       (let [page (util/page-name-sanity-lc page)
@@ -171,7 +170,7 @@
                         tags)
                        (remove nil?)
                        (distinct))
-            nodes (build-nodes dark? page links (set tags) nodes namespaces)
+            nodes (build-nodes dark? page links (set tags) nodes namespaces color-property color-settings)
             full-pages (db/get-all-pages repo)
             all-pages (map db/get-original-name full-pages)
             page-name->original-name (zipmap (map :block/name full-pages) all-pages)]
@@ -182,7 +181,7 @@
 
 (defn build-block-graph
   "Builds a citation/reference graph for a given block uuid."
-  [block theme]
+  [block theme color-property color-settings]
   (let [dark? (= "dark" theme)]
     (when-let [repo (state/get-current-repo)]
       (let [ref-blocks (db/get-block-referenced-blocks block)
@@ -213,7 +212,7 @@
                        (distinct)
                        ;; FIXME: get block tags
                        )
-            nodes (build-nodes dark? block links #{} nodes namespaces)]
+            nodes (build-nodes dark? block links #{} nodes namespaces color-property color-settings)]
         (normalize-page-name
          {:nodes nodes
           :links links})))))

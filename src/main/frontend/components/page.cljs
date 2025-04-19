@@ -843,8 +843,10 @@
   [state]
   (let [settings (state/graph-settings)
         forcesettings (state/graph-forcesettings)
+        color-property (state/graph-color-property)
+        color-settings (state/graph-color-settings)
         theme (state/sub :ui/theme)
-        graph (graph-handler/build-global-graph theme settings)
+        graph (graph-handler/build-global-graph theme settings color-property color-settings)
         search-graph-filters (state/sub :search/graph-filters)
         graph (update graph :nodes #(filter-graph-nodes % search-graph-filters))]
     (global-graph-inner graph settings forcesettings theme)))
@@ -882,9 +884,11 @@
         theme (:ui/theme @state/state)
         dark? (= theme "dark")
         show-journals-in-page-graph (rum/react *show-journals-in-page-graph?)
+        color-property (state/graph-color-property)
+        color-settings (state/graph-color-settings)        
         graph (if (util/uuid-string? page)
-                (graph-handler/build-block-graph (uuid page) theme)
-                (graph-handler/build-page-graph page theme show-journals-in-page-graph))]
+                (graph-handler/build-block-graph (uuid page) theme color-property color-settings)
+                (graph-handler/build-page-graph page theme show-journals-in-page-graph color-property color-settings))]
     (when (seq (:nodes graph))
       (page-graph-inner page graph dark?))))
 
