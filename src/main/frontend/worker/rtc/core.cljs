@@ -377,9 +377,8 @@
   [stop-before-start?]
   (m/sp
     (let [repo (worker-state/get-current-repo)
-          token (worker-state/get-id-token)
-          conn (worker-state/get-datascript-conn repo)]
-      (when (and repo token conn)
+          token (worker-state/get-id-token)]
+      (when (and repo token)
         (when stop-before-start? (rtc-stop))
         (let [ex (m/? (new-task--rtc-start* repo token))]
           (when-let [ex-data* (ex-data ex)]
