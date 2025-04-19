@@ -68,5 +68,3 @@ deps/shui/.lsp
 deps/shui/.lsp-cache
 deps/shui/.clj-kondo
 tx-log*
-
-static/yarn.lock
