@@ -1108,14 +1108,16 @@
     nodes))
 
 (rum/defc graph-aux
-  [settings forcesettings theme search-graph-filters]
+  [settings forcesettings theme search-graph-filters color-property color-settings]
   (let [[graph set-graph!] (hooks/use-state nil)]
     (hooks/use-effect!
      (fn []
        (p/let [result (state/<invoke-db-worker :thread-api/build-graph (state/get-current-repo)
                                                (assoc settings
                                                       :type :global
-                                                      :theme theme))]
+                                                      :theme theme)
+                                               color-property
+                                               color-settings)]
          (set-graph! result)))
      [theme settings])
     (when graph
@@ -1136,11 +1138,13 @@
   [state]
   (let [settings (state/graph-settings)
         forcesettings (state/graph-forcesettings)
+        color-property (state/graph-color-property)
+        color-settings (state/graph-color-settings)
         theme (state/sub :ui/theme)
         ;; Needed for query to retrigger after reset
         _reset? (rum/react *graph-reset?)
         search-graph-filters (state/sub :search/graph-filters)]
-    (graph-aux settings forcesettings theme search-graph-filters)))
+    (graph-aux settings forcesettings theme search-graph-filters color-property color-settings)))
 
 (rum/defc page-graph-inner < rum/reactive
   [_page graph dark?]
@@ -1165,12 +1169,12 @@
                         (graph-register-handlers graph (atom nil) (atom nil) dark?))})]))
 
 (rum/defc page-graph-aux
-  [page opts]
+  [page opts color-property color-settings]
   (let [[graph set-graph!] (hooks/use-state nil)
         dark? (= (:theme opts) "dark")]
     (hooks/use-effect!
      (fn []
-       (p/let [result (state/<invoke-db-worker :thread-api/build-graph (state/get-current-repo) opts)]
+       (p/let [result (state/<invoke-db-worker :thread-api/build-graph (state/get-current-repo) opts color-property color-settings)]
          (set-graph! result)))
      [opts])
     (when (seq (:nodes graph))
@@ -1184,12 +1188,16 @@
               (date/today))
         theme (:ui/theme @state/state)
         show-journals-in-page-graph (rum/react *show-journals-in-page-graph?)
+        color-property (state/graph-color-property)
+        color-settings (state/graph-color-settings)
         page-entity (db/get-page page)]
     (page-graph-aux page
                     {:type (if (ldb/page? page-entity) :page :block)
                      :block/uuid (:block/uuid page-entity)
                      :theme theme
-                     :show-journals? show-journals-in-page-graph})))
+                     :show-journals? show-journals-in-page-graph}
+                    color-property
+                    color-settings)))
 
 (defn batch-delete-dialog
   [pages orphaned-pages? refresh-fn]
