@@ -2365,7 +2365,7 @@
         query (:logseq.property/query block)
         advanced-query? (and query? (= :code (:logseq.property.node/display-type query)))
         show-query? (and *show-query? @*show-query?)]
-    [:div.w-full
+    [:div
      {:class (if (and query? blank?)
                "inline-flex"
                "inline")
