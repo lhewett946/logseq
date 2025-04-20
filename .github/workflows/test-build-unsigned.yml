@@ -62,4 +62,28 @@ jobs:
       - name: Lint to keep db and file graph code separate
         run: bb lint:db-and-file-graphs-separate
 
-      
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Out Repository
+        uses: actions/checkout@v4
+
+      # Must set up Java before running some Clojure tools
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: ${{env.JAVA_VERSION}}
+
+      - name: Install Node.js, NPM and Yarn
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set up Clojure
+        uses: DeLaGuardo/setup-clojure@10.1
+        with:
+          cli: ${{env.CLOJURE_VERSION}}
+
+      - name: Compile CLJS
+        run: yarn install && gulp build && yarn cljs:release-electron
