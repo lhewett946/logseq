@@ -840,11 +840,13 @@
              (file/write-files! conn col (worker-state/get-context)))
            (js/console.error (str "DB is not found for " repo))))))))
 
-(defn on-become-master
+(defn- on-become-master
   [repo]
-  (p/do!
-   (init-sqlite-module!)
-   (start-db! repo {})))
+  (js/Promise.
+   (m/sp
+     (c.m/<? (init-sqlite-module!))
+     (c.m/<? (start-db! repo {}))
+     (m/? (rtc.core/new-task--rtc-start true)))))
 
 (defn- init-service!
   [graph]
@@ -852,8 +854,8 @@
     (close-db! prev-graph))
   (when (and graph (not= graph (first @*service)))
     (p/let [service (shared-service/<create-service graph
-                                                   (bean/->js fns)
-                                                   #(on-become-master graph))]
+                                                    (bean/->js fns)
+                                                    #(on-become-master graph))]
       (assert (p/promise? (get-in service [:status :ready])))
       (reset! *service [graph service])
       service)))
@@ -861,8 +863,8 @@
 (def-thread-api :thread-api/init-shared-service
   [graph]
   (p/do!
-    (init-service! graph)
-    nil))
+   (init-service! graph)
+   nil))
 
 (defn init
   "web worker entry"
