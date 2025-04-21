@@ -275,11 +275,13 @@ jobs:
 
       - name: Compile CLJS
         run: |
-         yarn install
-         cd static
-         yarn install 
-         cd ..
-         yarn release-app
+          yarn install
+          gulp build
+          yarn cljs:release-electron
+          cd static
+          yarn install 
+          cd ..
+          yarn release-app
 
       - name: Prepare public Directory
         run: |
@@ -340,6 +342,8 @@ jobs:
       - name: Build/Release Electron App
         run: |
           yarn install
+          gulp build
+          yarn cljs:release-electron
           cd static
           yarn install
           yarn electron:make
@@ -400,6 +404,8 @@ jobs:
       - name: Build/Release Electron App
         run: |
           yarn install
+          gulp build
+          yarn cljs:release-electron
           cd static
           yarn install 
           yarn electron:make-linux-arm64
