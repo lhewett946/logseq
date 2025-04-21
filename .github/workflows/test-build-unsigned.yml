@@ -416,3 +416,54 @@ jobs:
         with:
           name: logseq-linux-arm64-builds
           path: builds          
+
+  build-windows:
+    name: Windows Build
+    runs-on: [windows-latest]
+    needs: [ clojure-script-test, typos, lint ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Node.js, NPM and Yarn
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: ${{env.JAVA_VERSION}}
+
+      - name: Set up Clojure
+        uses: DeLaGuardo/setup-clojure@10.1
+        with:
+          cli: ${{env.CLOJURE_VERSION}}
+
+      - name: Deps Electron app
+        run: |
+          yarn install
+          gulp build
+          yarn cljs:release-electron
+          cd static 
+          yarn install
+  
+      - name: Fix Deps Electron app
+        run: yarn run postinstall
+        working-directory: ./static/node_modules/dugite/
+  
+      - name: Build/Release Electron app
+        run: yarn electron:make
+        working-directory: ./static
+
+      - name: Save Artifact
+        run: |
+          mkdir builds
+          mv static\out\make\squirrel.windows\x64\*.exe    builds\Logseq-win-x64-${{ steps.ref.outputs.version }}.exe
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: logseq-win64-unsigned-builds
+          path: builds
