@@ -16,7 +16,7 @@ updates:
     schedule:
       interval: "weekly"
 
-  - package-ecosystem: "maven"
+  - package-ecosystem: "gradle"
     directory: "./android"
     schedule:
       interval: "weekly"
