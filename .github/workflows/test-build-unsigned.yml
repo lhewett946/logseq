@@ -404,6 +404,7 @@ jobs:
         
       - name: Build/Release Electron App
         run: yarn electron:make-linux-arm64
+        working-directory: ./static
         
       - name: Save artifacts
         run: |
