@@ -274,7 +274,12 @@ jobs:
           cli: ${{env.CLOJURE_VERSION}}
 
       - name: Compile CLJS
-        run: yarn install && cd static && yarn install && cd .. && yarn release-app
+        run: |
+         yarn install
+         cd static
+         yarn install 
+         cd ..
+         yarn release-app
 
       - name: Prepare public Directory
         run: |
@@ -333,7 +338,11 @@ jobs:
           cli: ${{env.CLOJURE_VERSION}}
 
       - name: Build/Release Electron App
-        run: yarn install && cd static && yarn install && yarn electron:make
+        run: |
+          yarn install
+          cd static
+          yarn install
+          yarn electron:make
 
       - name: Save artifacts
         run: |
@@ -389,7 +398,11 @@ jobs:
         working-directory: ./static
         
       - name: Build/Release Electron App
-        run: yarn install && cd static && yarn install && yarn electron:make-linux-arm64
+        run: |
+          yarn install
+          cd static
+          yarn install 
+          yarn electron:make-linux-arm64
         
       - name: Save artifacts
         run: |
