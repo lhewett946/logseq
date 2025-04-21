@@ -544,9 +544,9 @@
 (defn export-repo-as-markdown!
   "TODO: indent-style and remove-options"
   [repo]
-  (p/let [files (util/profile :get-file-content (common/<get-file-contents repo "md"))]
-    (when (seq files)
-      (let [files (export-files-as-markdown files nil)
+  (p/let [files* (util/profile :get-file-content (common/<get-file-contents repo "md"))]
+    (when (seq files*)
+      (let [files (export-files-as-markdown files* nil)
             repo' (if (config/db-based-graph? repo)
                     (string/replace repo config/db-version-prefix "")
                     (path/basename repo))

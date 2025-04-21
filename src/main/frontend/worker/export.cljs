@@ -47,7 +47,7 @@
                 (assoc page' :block/children children))))))
 
 (defn get-all-page->content
-  [repo db]
+  [repo db options]
   (let [filter-fn (if (ldb/db-based-graph? db)
                     (fn [ent]
                       (or (not (:logseq.property/built-in? ent))
