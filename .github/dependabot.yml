@@ -15,3 +15,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+
+  - package-ecosystem: "maven"
+    directory: "./android"
+    schedule:
+      interval: "weekly"
