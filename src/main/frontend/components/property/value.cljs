@@ -842,7 +842,7 @@
                      :input-opts input-opts
                      :on-input (fn [v]
                                  (if (string/blank? v)
-                                   (set-result! initial-choices)
+                                   initial-choices
                                    ;; TODO rank initial choices higher
                                    (p/let [result (search/block-search (state/get-current-repo) v {:enable-snippet? false
                                                                                                    :built-in? false})]
