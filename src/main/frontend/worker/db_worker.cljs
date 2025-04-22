@@ -846,6 +846,7 @@
    (m/sp
      (c.m/<? (init-sqlite-module!))
      (c.m/<? (start-db! repo {}))
+     (assert (some? (worker-state/get-datascript-conn repo)))
      (m/? (rtc.core/new-task--rtc-start true)))))
 
 (def broadcast-data-types
