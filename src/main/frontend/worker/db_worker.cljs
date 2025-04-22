@@ -468,7 +468,7 @@
 ;; [graph service]
 (defonce *service (atom []))
 (defonce fns {"remoteInvoke" thread-api/remote-function})
-(declare init-service!)
+(declare <init-service!)
 
 (defn- start-db!
   [repo {:keys [close-other-db?]
@@ -858,7 +858,7 @@
          :rtc-log
          :rtc-sync-state])))
 
-(defn- init-service!
+(defn- <init-service!
   [graph]
   (when-let [prev-graph (first @*service)]
     (close-db! prev-graph))
@@ -874,7 +874,7 @@
 (def-thread-api :thread-api/init-shared-service
   [graph]
   (p/do!
-   (init-service! graph)
+   (<init-service! graph)
    nil))
 
 (defn init
@@ -887,8 +887,18 @@
                          [k
                           (fn [& args]
                             (let [[_graph service] @*service
-                                  method-k (keyword (first args))]
+                                  method-k (keyword (first args))
+                                  method-args (ldb/read-transit-str (last args))]
                               (cond
+                                (and (= :thread-api/create-or-open-db method-k)
+                                     (:create-graph? (second method-args)))
+                                ;; because shared-service operates at the graph level,
+                                ;; creating a new database requires re-initializing the service.
+                                (p/let [service (<init-service! (first method-args))]
+                                  ;; wait for service ready
+                                  (get-in service [:status :ready])
+                                  (js-invoke (:proxy service) k args))
+
                                 (or (contains? #{:thread-api/init-shared-service :thread-api/sync-app-state} method-k)
                                     (nil? service))
                                 ;; only proceed down this branch before shared-service is initialized
