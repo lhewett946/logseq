@@ -449,10 +449,6 @@ jobs:
           cd static 
           yarn install
   
-      - name: Fix Deps Electron app
-        run: yarn run postinstall
-        working-directory: ./static/node_modules/dugite/
-  
       - name: Build/Release Electron app
         run: yarn electron:make
         working-directory: ./static
