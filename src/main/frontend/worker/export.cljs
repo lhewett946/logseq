@@ -7,8 +7,7 @@
             [logseq.db.sqlite.create-graph :as sqlite-create-graph]
             [logseq.db.sqlite.util :as sqlite-util]
             [logseq.graph-parser.property :as gp-property]
-            [logseq.outliner.tree :as otree]
-            [logseq.db.sqlite.create-graph :as sqlite-create-graph]))
+            [logseq.outliner.tree :as otree]))
 
 (defn- safe-keywordize
   [block]
