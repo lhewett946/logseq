@@ -610,11 +610,9 @@
         clear-value-label [:div.flex.flex-row.items-center.gap-1.text-sm
                            (ui/icon "x" {:size 14})
                            [:div clear-value]]
-        items (if (:property/closed-values property)
-                items                   ; sorted by order
-                (sort-by (fn [item]
-                           (db-property/property-value-content item))
-                         items))
+        items (sort-by (fn [item]
+                         (or (:block/title item) (:label item)))
+                       items)
         items' (->>
                 (if (and (seq selected-choices)
                          (not multiple-choices?)
@@ -842,7 +840,7 @@
                      :input-opts input-opts
                      :on-input (fn [v]
                                  (if (string/blank? v)
-                                   initial-choices
+                                   (set-result! initial-choices)
                                    ;; TODO rank initial choices higher
                                    (p/let [result (search/block-search (state/get-current-repo) v {:enable-snippet? false
                                                                                                    :built-in? false})]
