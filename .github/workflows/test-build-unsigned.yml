@@ -487,11 +487,6 @@ jobs:
         uses: DeLaGuardo/setup-clojure@13.2
         with:
           cli: ${{env.CLOJURE_VERSION}}
-        
-      - name: Install Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
                 
       - name: Build/Release Electron App for x64
         run: | 
@@ -515,7 +510,7 @@ jobs:
           path: builds
         
   build-macos-arm64:
-    name: MacOS x64 Build
+    name: MacOS arm64 Build
     runs-on: macos-13
     needs: [ clojure-script-test, typos, lint ]
     steps:
@@ -537,11 +532,6 @@ jobs:
         uses: DeLaGuardo/setup-clojure@13.2
         with:
           cli: ${{env.CLOJURE_VERSION}}
-      
-      - name: Install Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
 
       - name: Fetch deps
         env:
@@ -551,7 +541,7 @@ jobs:
           gulp build
           yarn cljs:release-electron
           cd static
-          yarn install --ignore-platform
+          yarn install
         
       - name: Build/Release Electron App for arm64
         run: yarn electron:make-macos-arm64
