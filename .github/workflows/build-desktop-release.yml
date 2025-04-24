@@ -67,7 +67,7 @@ jobs:
           ref: ${{ github.event.inputs.git-ref }}
 
       - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -189,7 +189,7 @@ jobs:
           path: static
 
       - name: Set up Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'yarn'
@@ -239,7 +239,7 @@ jobs:
           echo "version=$pkgver" >> $GITHUB_OUTPUT
 
       - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -285,7 +285,7 @@ jobs:
           echo "version=$pkgver" >> $GITHUB_OUTPUT
 
       - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -337,7 +337,7 @@ jobs:
         run: echo "version=$(cat ./static/VERSION)" >> $env:GITHUB_OUTPUT
 
       - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -409,7 +409,7 @@ jobs:
         run: ls -al ./static
 
       - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -482,7 +482,7 @@ jobs:
           echo "version=$pkgver" >> $GITHUB_OUTPUT
 
       - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
