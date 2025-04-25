@@ -372,7 +372,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          architecture: arm64
 
       - name: Set up Java
         uses: actions/setup-java@v3
@@ -393,7 +392,7 @@ jobs:
           gulp build
           yarn cljs:release-electron
           cd static
-          yarn install
+          yarn install --target_arch=arm64 --target_platform=linux
           rsapi_version=`node -e 'console.log(require("@logseq/rsapi/package.json").optionalDependencies["@logseq/rsapi-linux-arm64-gnu"])'`
           temp_dir=`mktemp -d`
           cd "$temp_dir"
@@ -522,7 +521,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          architecture: arm64
 
       - name: Set up Java
         uses: actions/setup-java@v3
@@ -543,7 +541,7 @@ jobs:
           gulp build
           yarn cljs:release-electron
           cd static
-          yarn install
+          yarn install --target_arch=arm64 --target_platform=darwin
         
       - name: Build/Release Electron App for arm64
         run: yarn electron:make-macos-arm64
