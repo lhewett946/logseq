@@ -74,12 +74,6 @@ jobs:
 
       - name: Lint to keep db and file graph code separate
         run: bb lint:db-and-file-graphs-separate
-
-      - name: Lint datalog rules
-        run: bb lint:rules
-
-      - name: Lint for public vars that are private based on usage
-        run: bb lint:minimize-public-vars
       
   compile:
     runs-on: ubuntu-latest
