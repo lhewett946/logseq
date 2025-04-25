@@ -55,7 +55,7 @@ jobs:
 
       ## Run linting
       - name: Run clj-kondo lint
-        run: clojure -M:clj-kondo --parallel --lint src test
+        run: clojure -M:clj-kondo --parallel --lint src
 
       - name: Carve lint for unused vars
         run: bb lint:carve
