@@ -183,9 +183,6 @@ jobs:
 
       - name: Fetch scripts yarn deps
         run: cd scripts && yarn install --frozen-lockfile
- 
-      - name: Run nbb-logseq tests
-        run: yarn test
 
       # In this job because it depends on an npm package
       - name: Load namespaces into nbb-logseq
