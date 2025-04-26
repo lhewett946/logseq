@@ -296,7 +296,7 @@ jobs:
         run: npx cap sync android
   
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v2
+        uses: android-actions/setup-android@v3
   
       - name: Build Android
         run: |
