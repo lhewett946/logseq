@@ -443,11 +443,11 @@ jobs:
 
       - name: Deps Electron app
         run: |
-          yarn install
+          yarn install --timeout 600000
           gulp build
           yarn cljs:release-electron
           cd static 
-          yarn install
+          yarn install --timeout 600000
   
       - name: Build/Release Electron app
         run: yarn electron:make
