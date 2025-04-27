@@ -23,3 +23,6 @@ jobs:
 
   lint:
     uses: ./.github/workflows/lint.yml
+
+  compile:
+    uses: ./.github/workflows/compile.yml
