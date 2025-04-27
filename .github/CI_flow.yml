@@ -1,0 +1,22 @@
+# workflow to coordinate the CI/CD process
+name: CI/CD Workflow
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '*.md'
+  pull_request:
+    branches:
+      - master
+    paths-ignore:
+      - '*.md'
+
+jobs:
+
+  check-typos:
+    uses: ./.github/workflows/check-typos.yml

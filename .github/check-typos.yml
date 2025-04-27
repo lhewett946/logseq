@@ -1,0 +1,20 @@
+# workflow to check for typos
+name: Check for Typos
+
+permissions:
+  contents: read
+on:
+  workflow_call:
+
+jobs:
+  typos:
+    name: Spell Check with Typos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Check spelling with custom config file
+        uses: crate-ci/typos@v1.16.8
+        with:
+          config: ./typos.toml
