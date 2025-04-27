@@ -1,43 +1,32 @@
+# workflow to run E2E tests
 name: E2E
 
 # Running E2E test multiple times to confirm test stability.
 # E2E test could be randomly failed due to the batch update mechanism of React.
 # Robust E2E test could help improving dev experience.
 
+permissions:
+  contents: read
 on:
-  push:
-    branches: [master]
-    paths:
-      - 'e2e-tests/**'
-  # TODO: Re-enable when ready to enable tests for file graphs
-  # pull_request:
-  #   branches: [master]
-  #   paths:
-  #     - 'e2e-tests/**'
+  workflow_call:
 
 env:
   CLOJURE_VERSION: '1.11.1.1413'
-  JAVA_VERSION: '11'
-  # This is the latest node version we can run.
   NODE_VERSION: '20'
-  BABASHKA_VERSION: '1.0.168'
+  JAVA_VERSION: '21'
 
 jobs:
   e2e-test-build:
     name: Build Test Artifact
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c  # v3.3.0
+        uses: actions/checkout@v4
 
       - name: Set up Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'yarn'
-          cache-dependency-path: |
-            yarn.lock
-            static/yarn.lock
 
       - name: Set up Java
         uses: actions/setup-java@v3
@@ -50,29 +39,8 @@ jobs:
         with:
           cli: ${{ env.CLOJURE_VERSION }}
 
-      - name: Clojure cache
-        uses: actions/cache@v3
-        id: clojure-deps
-        with:
-          path: |
-            ~/.m2/repository
-            ~/.gitlibs
-          key: ${{ runner.os }}-clojure-deps-${{ hashFiles('deps.edn') }}
-          restore-keys: ${{ runner.os }}-clojure-deps-
-
       - name: Fetch Clojure deps
-        if: steps.clojure-deps.outputs.cache-hit != 'true'
         run: clojure -A:cljs -P
-
-      - name: Shadow-cljs cache
-        uses: actions/cache@v3
-        with:
-          path: .shadow-cljs
-          # ensure update cache every time
-          key: ${{ runner.os }}-shadow-cljs-${{ github.sha }}
-          # will match most recent upload
-          restore-keys: |
-            ${{ runner.os }}-shadow-cljs-
 
       - name: Fetch yarn deps
         run: yarn install
@@ -82,7 +50,8 @@ jobs:
       # NOTE: require the app to be build with DEV-RELEASE flag
       - name: Prepare E2E test build
         run: |
-          yarn gulp:build && clojure -M:cljs release app electron --config-merge "{:closure-defines {frontend.config/DEV-RELEASE true}}" --debug
+          yarn gulp:build
+          clojure -M:cljs release app electron --config-merge "{:closure-defines {frontend.config/DEV-RELEASE true}}" --debug
 
       # NOTE: should include .shadow-cljs if in dev mode(compile)
       - name: Create Archive for build
@@ -105,11 +74,8 @@ jobs:
         shard: [1, 2, 3]
 
     steps:
-      - name: Repeat message
-        run: echo ::info title=StartUp::E2E testing shard ${{ matrix.shard}}/3 repeat ${{ matrix.repeat }}
-
       - name: Checkout
-        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c  # v3.3.0
+        uses: actions/checkout@v4
 
       - name: Download test build artifact
         uses: actions/download-artifact@v4
@@ -123,20 +89,15 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'yarn'
-          cache-dependency-path: |
-            yarn.lock
-            static/yarn.lock
 
       - name: Fetch yarn deps for E2E test
         run: |
           yarn install
-          (cd static && yarn install && yarn rebuild:all)
+          cd static
+          yarn install
+          yarn rebuild:all
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: true
-
-      - name: Ensure static yarn.lock is up to date
-        run: git diff --exit-code static/yarn.lock
 
       - name: Install Fluxbox
         run: sudo apt-get update && sudo apt-get install -y fluxbox
