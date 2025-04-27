@@ -12,18 +12,13 @@ env:
   BABASHKA_VERSION: '1.0.168'
 
 jobs:
-  checkout:
-    name: Checkout Repository
+  run-lint:
+    name: Run lint checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-  setup:
-    name: Setup Environment
-    runs-on: ubuntu-latest
-    needs: checkout
-    steps:
       # Must set up Java before running some Clojure tools
       - name: Set up Java
         uses: actions/setup-java@v3
@@ -37,65 +32,23 @@ jobs:
           cli: ${{env.CLOJURE_VERSION}}
           bb: ${{env.BABASHKA_VERSION}}
 
-  kondo-lint:
-    name: Kondo Lint
-    runs-on: ubuntu-latest
-    needs: 
-      - setup
-    steps:
       - name: Run clj-kondo lint
         run: clojure -M:clj-kondo --parallel --lint src
 
-  unused-vars:
-    name: Unused Vars
-    runs-on: ubuntu-latest
-    needs: 
-      - setup
-    steps:
       - name: Carve lint for unused vars
         run: bb lint:carve
 
-  large-vars:
-    name: Large Vars
-    runs-on: ubuntu-latest
-    needs: 
-      - setup
-    steps:
       - name: Lint for vars that are too large
         run: bb lint:large-vars
 
-  namespaces:
-    name: Undocumented Namespaces
-    runs-on: ubuntu-latest
-    needs: 
-      - setup
-    steps:
       - name: Lint for namespaces that aren't documented
         run: bb lint:ns-docstrings
 
-  translations:
-    name: Translations
-    runs-on: ubuntu-latest
-    needs: 
-      - setup
-    steps:
       - name: Lint invalid translation entries
         run: bb lang:validate-translations
 
-  worker-fe-separate:
-    name: Worker and Frontend Separation
-    runs-on: ubuntu-latest
-    needs: 
-      - setup
-    steps:
       - name: Lint to keep worker independent of frontend
         run: bb lint:worker-and-frontend-separate
 
-  db-file-graphs-separate:
-    name: DB and File Graphs Separation
-    runs-on: ubuntu-latest
-    needs: 
-      - setup
-    steps:
       - name: Lint to keep db and file graph code separate
         run: bb lint:db-and-file-graphs-separate
