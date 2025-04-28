@@ -1,0 +1,61 @@
+# workflow to build the Windows version of the app
+name: Build Windows
+
+permissions:
+  contents: read
+on:
+  workflow_call:
+
+env:
+  CLOJURE_VERSION: '1.11.1.1413'
+  NODE_VERSION: '20'
+  JAVA_VERSION: '21'
+
+jobs:
+  build-windows:
+    name: Windows Build
+    runs-on: [windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+   
+      - name: Install Node.js, NPM and Yarn
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: ${{env.JAVA_VERSION}}
+
+      - name: Set up Clojure
+        uses: DeLaGuardo/setup-clojure@13.2
+        with:
+          cli: ${{env.CLOJURE_VERSION}}
+
+      - name: Deps Electron app
+        run: |
+          yarn install --network-timeout 600000
+          gulp build
+          yarn cljs:release-electron
+          cd static 
+          yarn install --network-timeout 600000
+   
+      - name: Build/Release Electron app
+        run: yarn electron:make
+        working-directory: ./static
+
+      - name: Save Artifact
+        run: |
+          mkdir builds
+          mv static\out\make\squirrel.windows\x64\*.nupkg  builds\Logseq-win-x64-full.nupkg
+          mv static\out\make\zip\win32\x64\*.zip           builds\Logseq-win-x64.zip
+          mv static\out\make\wix\x64\Logseq.msi            builds\Logseq-win-x64.msi
+            
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: logseq-win64-unsigned-builds
+          path: builds
