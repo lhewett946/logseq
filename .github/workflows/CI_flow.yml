@@ -28,8 +28,8 @@ jobs:
     uses: ./.github/workflows/compile.yml
 
   # TODO: Re-enable when ready to enable tests for file graphs
-  #e2e-test:
-  #  uses: ./.github/workflows/e2e.yml
+  #test-e2e:
+  #  uses: ./.github/workflows/test-e2e.yml
   #  needs: [compile]
 
   test-db-graph:
