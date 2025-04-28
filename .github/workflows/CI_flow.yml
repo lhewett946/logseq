@@ -35,3 +35,7 @@ jobs:
   build-android:
     uses: ./.github/workflows/build-android.yml
     needs: [check-typos, lint, compile]
+
+  build-linux:
+    uses: ./.github/workflows/build-linux.yml
+    needs: [check-typos, lint, compile]

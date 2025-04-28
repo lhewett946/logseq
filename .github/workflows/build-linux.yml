@@ -1,0 +1,114 @@
+# workflow to build the apps for Linux
+name: Build Linux
+
+permissions:
+  contents: read
+on:
+  workflow_call:
+
+env:
+  CLOJURE_VERSION: '1.11.1.1413'
+  NODE_VERSION: '20'
+  JAVA_VERSION: '21'
+
+jobs:
+  build-linux-x64:
+      name: Linux x64 Build
+      runs-on: [ubuntu-latest]
+      steps:
+      
+        - name: Checkout
+          uses: actions/checkout@v4
+  
+        - name: Install Node.js, NPM and Yarn
+          uses: actions/setup-node@v4
+          with:
+            node-version: ${{ env.NODE_VERSION }}
+  
+        - name: Set up Java
+          uses: actions/setup-java@v3
+          with:
+            distribution: 'zulu'
+            java-version: ${{env.JAVA_VERSION}}
+  
+        - name: Set up Clojure
+          uses: DeLaGuardo/setup-clojure@13.2
+          with:
+            cli: ${{env.CLOJURE_VERSION}}
+  
+        - name: Build/Release Electron App
+          run: |
+            yarn install
+            gulp build
+            yarn cljs:release-electron
+            cd static
+            yarn install
+            yarn electron:make
+  
+        - name: Save artifacts
+          run: |
+            mkdir -p builds
+            mv static/out/make/*-*.AppImage ./builds/Logseq-linux-x64.AppImage
+            mv static/out/make/zip/linux/x64/*-linux-x64-*.zip ./builds/Logseq-linux-x64.zip
+  
+        - name: Upload Artifact
+          uses: actions/upload-artifact@v4
+          with:
+            name: logseq-linux-x64-builds
+            path: builds
+  
+  build-linux-arm64:
+      name: Linux arm64 Build
+      runs-on: [ubuntu-latest]
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Install Node.js, NPM and Yarn
+          uses: actions/setup-node@v4
+          with:
+            node-version: ${{ env.NODE_VERSION }}
+
+        - name: Set up Java
+          uses: actions/setup-java@v3
+          with:
+            distribution: 'zulu'
+            java-version: ${{env.JAVA_VERSION}}
+
+        - name: Set up Clojure
+          uses: DeLaGuardo/setup-clojure@13.2
+          with:
+            cli: ${{env.CLOJURE_VERSION}}
+        
+        - name: Fetch deps
+          env:
+            npm_config_arch: arm64
+          run: |
+            yarn install
+            gulp build
+            yarn cljs:release-electron
+            cd static
+            yarn install --target_arch=arm64 --target_platform=linux
+            rsapi_version=`node -e 'console.log(require("@logseq/rsapi/package.json").optionalDependencies["@logseq/rsapi-linux-arm64-gnu"])'`
+            temp_dir=`mktemp -d`
+            cd "$temp_dir"
+            echo '{"dependencies": {"@logseq/rsapi-linux-arm64-gnu": "'"$rsapi_version"'"}}' > package.json
+            yarn install --ignore-platform
+            cd -
+            mv "$temp_dir/node_modules/@logseq/rsapi-linux-arm64-gnu" node_modules/@logseq/rsapi-linux-arm64-gnu
+            rm -rf "$temp_dir" "node_modules/@logseq/rsapi-linux-x64-gnu"
+          
+        - name: Build/Release Electron App
+          run: yarn electron:make-linux-arm64
+          working-directory: ./static
+          
+        - name: Save artifacts
+          run: |
+            mkdir -p builds
+            mv static/out/make/zip/linux/arm64/*-linux-arm64-*.zip ./builds/Logseq-linux-arm64.zip
+          
+        - name: Upload Artifact
+          uses: actions/upload-artifact@v4
+          with:
+            name: logseq-linux-arm64-builds
+            path: builds   
