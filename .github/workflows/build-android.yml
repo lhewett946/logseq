@@ -40,11 +40,6 @@ jobs:
       - name: Compile CLJS
         run: |
           yarn install
-          gulp build
-          yarn cljs:release-electron
-          cd static
-          yarn install 
-          cd ..
           yarn release-app
   
       - name: Prepare public Directory
