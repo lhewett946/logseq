@@ -44,6 +44,10 @@ jobs:
     uses: ./.github/workflows/build-android.yml
     needs: [check-typos, lint, test-db-graph, test-clojure-script]
 
+  build-ios:
+    uses: ./.github/workflows/build-ios.yml
+    needs: [check-typos, lint, test-db-graph, test-clojure-script]
+  
   build-linux:
     uses: ./.github/workflows/build-linux.yml
     needs: [check-typos, lint, test-db-graph, test-clojure-script]
