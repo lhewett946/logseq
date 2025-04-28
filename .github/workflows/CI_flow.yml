@@ -32,10 +32,14 @@ jobs:
   #  uses: ./.github/workflows/e2e.yml
   #  needs: [compile]
 
+  test-db-graph:
+    uses: ./.github/workflows/test-db-graph.yml
+    needs: [compile]
+
   build-android:
     uses: ./.github/workflows/build-android.yml
-    needs: [check-typos, lint, compile]
+    needs: [check-typos, lint, test-db-graph]
 
   build-linux:
     uses: ./.github/workflows/build-linux.yml
-    needs: [check-typos, lint, compile]
+    needs: [check-typos, lint, test-db-graph]
