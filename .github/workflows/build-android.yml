@@ -8,7 +8,6 @@ permissions:
 on:
   workflow_call:
 
-
 env:
   CLOJURE_VERSION: '1.11.1.1413'
   NODE_VERSION: '20'
