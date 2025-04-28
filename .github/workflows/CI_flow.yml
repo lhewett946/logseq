@@ -51,3 +51,7 @@ jobs:
   build-windows:
     uses: ./.github/workflows/build-windows.yml
     needs: [check-typos, lint, test-db-graph, test-clojure-script]
+
+  build-macos:
+    uses: ./.github/workflows/build-macos.yml
+    needs: [check-typos, lint, test-db-graph, test-clojure-script]
