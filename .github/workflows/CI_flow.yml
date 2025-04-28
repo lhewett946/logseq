@@ -32,3 +32,6 @@ jobs:
   #  uses: ./.github/workflows/e2e.yml
   #  needs: [compile]
 
+  build-android:
+    uses: ./.github/workflows/build-android.yml
+    needs: [check-typos, lint, compile]
