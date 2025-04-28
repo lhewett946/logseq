@@ -19,7 +19,7 @@
         links))
 
 (defn- build-nodes
-  [dark? current-page page-links tags nodes namespaces color-property color-settings]
+  [dark? current-page page-links nodes namespaces color-property color-settings]
   (let [page-parents (set (map last namespaces))
         current-page (or current-page "")
         pages (common-util/distinct-by :db/id nodes)]
@@ -109,7 +109,7 @@
         page-links (reduce (fn [m [k v]] (-> (update m k inc)
                                              (update v inc))) {} links)
         links (build-links links)
-        nodes (build-nodes dark? nil page-links tags nodes namespaces color-property color-settings)]
+        nodes (build-nodes dark? nil page-links nodes namespaces color-property color-settings)]
     (-> {:nodes nodes
          :links links}
         normalize-page-name
@@ -201,7 +201,7 @@
                    (remove nil?)
                    (map #(d/entity db %))
                    (common-util/distinct-by :db/id))
-        nodes (build-nodes dark? (:block/title page-entity) links tags nodes namespaces color-property color-settings)]
+        nodes (build-nodes dark? (:block/title page-entity) links nodes namespaces color-property color-settings)]
     (normalize-page-name
      {:nodes nodes
       :links links})))
@@ -227,7 +227,7 @@
                      distinct
                        ;; FIXME: get block tags
                      )
-          nodes (build-nodes dark? block links #{} nodes namespaces color-property color-settings)]
+          nodes (build-nodes dark? block links nodes namespaces color-property color-settings)]
       (normalize-page-name
        {:nodes nodes
         :links links}))))
