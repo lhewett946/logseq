@@ -36,10 +36,14 @@ jobs:
     uses: ./.github/workflows/test-db-graph.yml
     needs: [compile]
 
+  test-clojure-script:
+    uses: ./.github/workflows/test-clojure-script.yml
+    needs: [compile]
+
   build-android:
     uses: ./.github/workflows/build-android.yml
-    needs: [check-typos, lint, test-db-graph]
+    needs: [check-typos, lint, test-db-graph, test-clojure-script]
 
   build-linux:
     uses: ./.github/workflows/build-linux.yml
-    needs: [check-typos, lint, test-db-graph]
+    needs: [check-typos, lint, test-db-graph, test-clojure-script]
