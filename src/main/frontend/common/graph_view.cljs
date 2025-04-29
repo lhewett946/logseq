@@ -19,7 +19,7 @@
         links))
 
 (defn- build-nodes
-  [dark? current-page page-links tags nodes namespaces]
+  [dark? current-page page-links nodes namespaces color-property color-settings]
   (let [page-parents (set (map last namespaces))
         current-page (or current-page "")
         pages (common-util/distinct-by :db/id nodes)]
@@ -30,14 +30,14 @@
      (mapv (fn [p]
              (let [page-title (:block/title p)
                    current-page? (= page-title current-page)
-                   color (case [dark? current-page?] ; FIXME: Put it into CSS
-                           [false false] "#999"
-                           [false true]  "#045591"
-                           [true false]  "#93a1a1"
-                           [true true]   "#ffffff")
-                   color (if (contains? tags (:db/id p))
-                           (if dark? "orange" "green")
-                           color)
+                   properties (:block/properties p)
+                   color-type (get properties color-property)
+                   color (get color-settings color-type)
+                   color (if current-page?
+                           (if dark? "#ffffff" "#045591")
+                           (if (nil? color)
+                             (if dark? "#93a1a1" "#999")
+                             color))
                    n (get page-links page-title 1)
                    size (int (* 8 (max 1.0 (js/Math.cbrt n))))]
                (cond->
@@ -75,12 +75,11 @@
      :links links}))
 
 (defn- build-global-graph
-  [db {:keys [theme journal? orphan-pages? builtin-pages? excluded-pages? created-at-filter]}]
+  [db {:keys [theme journal? orphan-pages? builtin-pages? excluded-pages? created-at-filter]} color-property color-settings]
   (let [dark? (= "dark" theme)
         relation (ldb/get-pages-relation db journal?)
         tagged-pages (ldb/get-all-tagged-pages db)
         namespaces (gp-db/get-all-namespace-relation db)
-        tags (set (map second tagged-pages))
         full-pages (ldb/get-all-pages db)
         db-based? (entity-plus/db-based-graph? db)
         created-ats (map :block/created-at full-pages)
@@ -109,7 +108,7 @@
         page-links (reduce (fn [m [k v]] (-> (update m k inc)
                                              (update v inc))) {} links)
         links (build-links links)
-        nodes (build-nodes dark? nil page-links tags nodes namespaces)]
+        nodes (build-nodes dark? nil page-links nodes namespaces color-property color-settings)]
     (-> {:nodes nodes
          :links links}
         normalize-page-name
@@ -168,7 +167,7 @@
      other-pages)))
 
 (defn- build-page-graph
-  [db page-uuid theme show-journal]
+  [db page-uuid theme show-journal color-property color-settings]
   (let [dark? (= "dark" theme)
         page-entity (d/entity db [:block/uuid page-uuid])
         db-based? (entity-plus/db-based-graph? db)
@@ -201,14 +200,14 @@
                    (remove nil?)
                    (map #(d/entity db %))
                    (common-util/distinct-by :db/id))
-        nodes (build-nodes dark? (:block/title page-entity) links tags nodes namespaces)]
+        nodes (build-nodes dark? (:block/title page-entity) links nodes namespaces color-property color-settings)]
     (normalize-page-name
      {:nodes nodes
       :links links})))
 
 (defn- build-block-graph
   "Builds a citation/reference graph for a given block uuid."
-  [db block-uuid theme]
+  [db block-uuid theme color-property color-settings]
   (when-let [block (and (uuid? block-uuid) (d/entity db [:block/uuid block-uuid]))]
     (let [dark? (= "dark" theme)
           ref-blocks (->> (concat (:block/_refs block) (:block/refs block))
@@ -227,14 +226,14 @@
                      distinct
                        ;; FIXME: get block tags
                      )
-          nodes (build-nodes dark? block links #{} nodes namespaces)]
+          nodes (build-nodes dark? block links nodes namespaces color-property color-settings)]
       (normalize-page-name
        {:nodes nodes
         :links links}))))
 
 (defn build-graph
-  [db opts]
+  [db opts color-property color-settings]
   (case (:type opts)
-    :global (build-global-graph db opts)
-    :block (build-block-graph db (:block/uuid opts) (:theme opts))
-    :page (build-page-graph db (:block/uuid opts) (:theme opts) (:show-journal? opts))))
+    :global (build-global-graph db opts color-property color-settings)
+    :block (build-block-graph db (:block/uuid opts) (:theme opts) color-property color-settings)
+    :page (build-page-graph db (:block/uuid opts) (:theme opts) (:show-journal? opts) color-property color-settings)))
