@@ -9,7 +9,7 @@
             [logseq.common.util :as common-util]
             [logseq.db :as ldb]
             [logseq.db.frontend.class :as db-class]
-            [logseq.db.frontend.entity-plus :as entity-plus]
+            [logseq.db.common.entity-plus :as entity-plus]
             [logseq.db.frontend.entity-util :as entity-util]
             [logseq.db.frontend.property :as db-property]
             [logseq.db.frontend.property.type :as db-property-type]
@@ -523,9 +523,20 @@
                               (filter (fn [row] (row-matched? db row filters input)) entities)
                               entities)
           group-by-page? (= group-by-property-ident :block/page)
+          readable-property-value-or-ent
+          (fn readable-property-value-or-ent [ent]
+            (let [pvalue (get ent group-by-property-ident)]
+              (if (de/entity? pvalue)
+              ;; Allow original grouping for pvalues with :db/ident e.g. closed values like status
+              ;; OR for any type that aren't text types
+                (if (or (:db/ident pvalue)
+                        (not (contains? db-property-type/closed-value-property-types (:logseq.property/type group-by-property))))
+                  pvalue
+                  (db-property/property-value-content pvalue))
+                pvalue)))
           result (if group-by-property-ident
                    (->> filtered-entities
-                        (group-by group-by-property-ident)
+                        (group-by readable-property-value-or-ent)
                         (seq)
                         (sort-by (fn [[by-value _]]
                                    (cond
@@ -543,7 +554,7 @@
                   (map
                    (fn [[by-value entities]]
                      (let [by-value' (if (de/entity? by-value)
-                                       (select-keys by-value [:db/id :block/uuid :block/title :block/name :logseq.property/value :logseq.property/icon :block/tags])
+                                       (select-keys by-value [:db/id :db/ident :block/uuid :block/title :block/name :logseq.property/value :logseq.property/icon :block/tags])
                                        by-value)
                            pages? (not (some :block/page entities))
                            group (if (and list-view? (not pages?))

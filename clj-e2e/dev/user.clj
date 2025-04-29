@@ -1,9 +1,12 @@
 (ns user
   "fns used on repl"
   (:require [clojure.test :refer [run-tests run-test]]
+            [logseq.e2e.block :as b]
+            [logseq.e2e.commands-test]
             [logseq.e2e.config :as config]
-            [logseq.e2e.editor-test]
             [logseq.e2e.fixtures :as fixtures]
+            [logseq.e2e.graph :as graph]
+            [logseq.e2e.keyboard :as k]
             [logseq.e2e.multi-tabs-test]
             [logseq.e2e.outliner-test]
             [logseq.e2e.rtc-basic-test]
@@ -23,10 +26,10 @@
   (some-> (get @*futures test-name) future-cancel)
   (swap! *futures dissoc test-name))
 
-(defn run-editor-test
+(defn run-commands-test
   []
-  (->> (future (run-tests 'logseq.e2e.editor-test))
-       (swap! *futures assoc :editor-test)))
+  (->> (future (run-tests 'logseq.e2e.commands-test))
+       (swap! *futures assoc :commands-test)))
 
 (defn run-outliner-test
   []
@@ -65,9 +68,16 @@
     (w/wait-for (first (util/get-edit-block-container))
                 {:state :detached}))
 
-  (run-tests 'logseq.e2e.editor-test
+  (run-tests 'logseq.e2e.commands-test
              'logseq.e2e.multi-tabs-test
              'logseq.e2e.outliner-test
              'logseq.e2e.rtc-basic-test)
+
+  (do
+    (reset! config/*headless true)
+    (reset! config/*slow-mo 100)
+    (dotimes [i 5]
+      (run-multi-tabs-test)))
+
   ;;
   )
