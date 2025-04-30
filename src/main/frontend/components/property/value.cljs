@@ -203,7 +203,7 @@
   "If a class and in a class schema context, add the property to its schema.
   Otherwise, add a block's property and its value"
   ([block property-id property-value] (<add-property! block property-id property-value {}))
-  ([block property-id property-value {:keys [selected? exit-edit? class-schema?]
+  ([block property-id property-value {:keys [selected? exit-edit? class-schema? entity-id?]
                                       :or {exit-edit? true}}]
    (let [repo (state/get-current-repo)
          class? (ldb/class? block)
@@ -219,7 +219,7 @@
            (<set-class-as-property! repo property))
          (db-property-handler/class-add-property! (:db/id block) property-id))
         (let [block-ids (map :block/uuid blocks)]
-          (property-handler/batch-set-block-property! repo block-ids property-id property-value)))
+          (property-handler/batch-set-block-property! repo block-ids property-id property-value {:entity-id? entity-id?})))
       (when (seq (:view/selected-blocks @state/state))
         (notification/show! "Property updated!" :success))
       (when-not many?
@@ -238,7 +238,7 @@
                                         :property property}))))))
 
 (defn- add-or-remove-property-value
-  [block property value selected? {:keys [refresh-result-f] :as opts}]
+  [block property value selected? {:keys [refresh-result-f entity-id?] :as opts}]
   (let [many? (db-property/many? property)
         blocks (get-operating-blocks block)
         repo (state/get-current-repo)]
@@ -252,6 +252,7 @@
      (if selected?
        (<add-property! block (:db/ident property) value
                        {:selected? selected?
+                        :entity-id? entity-id?
                         :exit-edit? (if (some? (:exit-edit? opts)) (:exit-edit? opts) (not many?))})
        (p/do!
         (ui-outliner-tx/transact!
@@ -717,6 +718,7 @@
                                   (and alias? (= (or (:db/id (:block/page block))
                                                      (:db/id block))
                                                  (:db/id node)))
+                                  (= :logseq.property/empty-placeholder (:db/ident node))
                                   (cond
                                     (= property-type :class)
                                     (ldb/private-tags (:db/ident node))
@@ -729,7 +731,6 @@
                                     :else
                                     false))))
                           result)))
-
         options (map (fn [node]
                        (let [node (if (:value node)
                                     (assoc (:value node) :block/title (:label node))
@@ -940,7 +941,8 @@
             on-chosen (fn [chosen selected?]
                         (let [value (if (map? chosen) (:value chosen) chosen)]
                           (add-or-remove-property-value block property value selected?
-                                                        {:exit-edit? exit-edit?
+                                                        {:entity-id? (when (integer? value) true)
+                                                         :exit-edit? exit-edit?
                                                          :refresh-result-f refresh-result-f})))
             selected-choices' (get block (:db/ident property))
             selected-choices (if (every? #(and (map? %) (:db/id %)) selected-choices')
@@ -995,6 +997,9 @@
       (cond
         (seq value-block)
         [:div.property-block-container.content.w-full
+         {:style (if (= (:db/ident property) :logseq.property/default-value)
+                   {:min-width 300}
+                   {})}
          (let [config {:id (str (if multiple-values?
                                   (:block/uuid block)
                                   (:block/uuid value-block)))
@@ -1015,7 +1020,7 @@
                (str (:db/id block) "-" (:db/id property) "-" (:db/id value-block)))))]
 
         :else
-        [:div.w-full.h-full
+        [:div.w-full.h-full.jtrigger.ls-empty-text-property
          {:tabIndex 0
           :class (if (:table-view? opts) "cursor-pointer" "cursor-text")
           :style {:min-height 20}
@@ -1190,7 +1195,9 @@
       :style {:min-height 24}}
      (cond
        (and (= :logseq.property/default-value (:db/ident property)) (nil? (:block/title value)))
-       [:div.jtrigger.cursor-pointer.text-sm.px-2 "Set default value"]
+       [:div.jtrigger.cursor-pointer.text-sm.px-2
+        {:on-click #(<create-new-block! block property "")}
+        "Set default value"]
 
        text-ref-type?
        (property-block-value value block property page-cp opts)
