@@ -14,8 +14,7 @@ env:
 
 jobs:
   deps-db:
-    runs-on: ubuntu-latesst
-    
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
