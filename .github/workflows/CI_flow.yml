@@ -45,20 +45,20 @@ jobs:
 
   build-android:
     uses: ./.github/workflows/build-android.yml
-    needs: [check-typos, lint, test-db-graph, test-clojure-script, test-deps]
+    needs: [check-typos, lint, test-e2e, test-db-graph, test-clojure-script, test-deps]
 
   build-ios:
     uses: ./.github/workflows/build-ios.yml
-    needs: [check-typos, lint, test-db-graph, test-clojure-script, test-deps]
+    needs: [check-typos, lint, test-e2e, test-db-graph, test-clojure-script, test-deps]
   
   build-linux:
     uses: ./.github/workflows/build-linux.yml
-    needs: [check-typos, lint, test-db-graph, test-clojure-script, test-deps]
+    needs: [check-typos, lint, test-e2e, test-db-graph, test-clojure-script, test-deps]
 
   build-windows:
     uses: ./.github/workflows/build-windows.yml
-    needs: [check-typos, lint, test-db-graph, test-clojure-script, test-deps]
+    needs: [check-typos, lint, test-e2e, test-db-graph, test-clojure-script, test-deps]
 
   build-macos:
     uses: ./.github/workflows/build-macos.yml
-    needs: [check-typos, lint, test-db-graph, test-clojure-script, test-deps]
+    needs: [check-typos, lint, test-e2e, test-db-graph, test-clojure-script, test-deps]
