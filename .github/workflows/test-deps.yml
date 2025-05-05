@@ -92,3 +92,48 @@ jobs:
       - name: Load namespaces into nbb-logseq
         run: bb test:load-all-namespaces-with-nbb .
         working-directory: deps/graph-parser
+
+  deps-common:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      # Must set up Java before running some Clojure tools
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: ${{env.JAVA_VERSION}}
+
+      - name: Install Node.js, NPM and Yarn
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set up Clojure
+        uses: DeLaGuardo/setup-clojure@13.2
+        with:
+          cli: ${{env.CLOJURE_VERSION}}
+          bb: ${{ env.BABASHKA_VERSION }}
+
+      - name: Fetch yarn deps
+        run: yarn install --frozen-lockfile
+        working-directory: deps/common
+  
+      - name: Run nbb-logseq tests
+        run: yarn test
+        working-directory: deps/common
+  
+      # In this job because it depends on an npm package
+      - name: Load namespaces into nbb-logseq
+        run: bb test:load-all-namespaces-with-nbb .
+        working-directory: deps/common
+
+      - name: Fetch Clojure deps
+        run: clojure -A:test -P
+        working-directory: deps/common
+
+      - name: Run ClojureScript tests
+        run: clojure -M:test
+        working-directory: deps/common
