@@ -365,11 +365,13 @@
 
           (db-migrate/migrate conn search-db)
 
-          (catch :default _e
-            (log/error "DB migrate failed, retrying")
-            (when db-based?
-              (rebuild-db-from-datoms! conn db import-type)
-              (db-migrate/migrate conn search-db))))
+          (catch :default e
+            (log/error "DB migrate failed, error: " e)
+            (if (and db-based? (= (:message e) "DB missing addresses"))
+              (do
+                (rebuild-db-from-datoms! conn db import-type)
+                (db-migrate/migrate conn search-db))
+              (throw e))))
 
         (db-listener/listen-db-changes! repo (get @*datascript-conns repo))))))
 
@@ -838,12 +840,12 @@
            (js/console.error (str "DB is not found for " repo))))))))
 
 (defn- on-become-master
-  [repo import?]
+  [repo config import?]
   (js/Promise.
    (m/sp
      (c.m/<? (init-sqlite-module!))
      (when-not import?
-       (c.m/<? (start-db! repo {}))
+       (c.m/<? (start-db! repo {:config config}))
        (assert (some? (worker-state/get-datascript-conn repo))))
      (m/? (rtc.core/new-task--rtc-start true)))))
 
@@ -858,7 +860,7 @@
          :rtc-sync-state])))
 
 (defn- <init-service!
-  [graph import?]
+  [graph config import?]
   (let [[prev-graph service] @*service]
     (some-> prev-graph close-db!)
     (when graph
@@ -866,7 +868,7 @@
         service
         (p/let [service (shared-service/<create-service graph
                                                         (bean/->js fns)
-                                                        #(on-become-master graph import?)
+                                                        #(on-become-master graph config import?)
                                                         broadcast-data-types
                                                         {:import? import?})]
           (assert (p/promise? (get-in service [:status :ready])))
@@ -889,7 +891,7 @@
                                 ;; because shared-service operates at the graph level,
                                 ;; creating a new database or switching to another one requires re-initializing the service.
                                 (let [[graph opts] (ldb/read-transit-str (last args))]
-                                  (p/let [service (<init-service! graph (some? (:import-type opts)))]
+                                  (p/let [service (<init-service! graph (:config opts) (some? (:import-type opts)))]
                                     (get-in service [:status :ready])
                                     ;; wait for service ready
                                     (js-invoke (:proxy service) k args)))

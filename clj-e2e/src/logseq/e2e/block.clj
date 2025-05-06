@@ -13,14 +13,16 @@
 
 (defn save-block
   [text]
-  (w/fill ".editor-wrapper textarea" text))
+  (w/fill util/editor-q text))
 
 (defn new-block
   [title]
-  (let [editor (util/get-editor)]
+  (let [editor (util/get-editor)
+        blocks-count (util/blocks-count)]
     (when-not editor (open-last-block))
     (assert/assert-editor-mode)
     (k/enter)
+    (assert/assert-have-count ".ls-block" (inc blocks-count))
     (assert/assert-editor-mode)
     (save-block title)))
 

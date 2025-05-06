@@ -54,14 +54,16 @@
              'logseq.e2e.outliner-test
              'logseq.e2e.rtc-basic-test))
 
-(comment
-
+(defn start
+  []
   (future
     (fixtures/open-page
      repl/pause
-     {:headless false}))
+     {:headless false})))
 
-  ;; You can put `(repl/pause)` in any test to pause the tests,
+(comment
+
+  ;; You can call or put `(repl/pause)` in any test to pause the tests,
   ;; this allows us to continue experimenting with the current page.
   (repl/pause)
 
@@ -69,7 +71,7 @@
   (repl/resume)
 
   ;; Run specific test
-  (future (run-test logseq.e2e.commands-test/query-test))
+  (future (run-test logseq.e2e.commands-test/new-property-test))
 
   ;; after the test has been paused, you can do anything with the current page like this
   (repl/with-page
@@ -83,7 +85,7 @@
 
   (do
     (reset! config/*headless true)
-    (reset! config/*slow-mo 100)
+    (reset! config/*slow-mo 50)
     (dotimes [i 5]
       (run-multi-tabs-test)))
 
