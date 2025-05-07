@@ -828,18 +828,21 @@
                                                           (fn [col]
                                                             (reduce
                                                              (fn [col property]
-                                                               (mapv (fn [item]
-                                                                       (if (and (vector? item) (= property (first item)))
-                                                                         (let [[p o v] item
-                                                                               f (fn [id]
-                                                                                   (let [new-ident (get new-idents (:db/ident (d/entity db [:block/uuid id])))]
-                                                                                     (common-uuid/gen-uuid :db-ident-block-uuid new-ident)))
-                                                                               v' (if (set? v)
-                                                                                    (set (map f v))
-                                                                                    (f v))]
-                                                                           [p o v'])
-                                                                         item))
-                                                                     col))
+                                                               (vec
+                                                                (keep (fn [item]
+                                                                        (if (and (vector? item) (= property (first item)))
+                                                                          (let [[p o v] item
+                                                                                f (fn [id]
+                                                                                    (when-let [new-ident (get new-idents (:db/ident (d/entity db [:block/uuid id])))]
+                                                                                      (common-uuid/gen-uuid :db-ident-block-uuid new-ident)))
+                                                                                v' (if (set? v)
+                                                                                     (when-let [v' (seq (keep f v))]
+                                                                                       (set v'))
+                                                                                     (f v))]
+                                                                            (when v'
+                                                                              [p o v']))
+                                                                          item))
+                                                                      col)))
                                                              col
                                                              [:logseq.task/status :logseq.task/priority])))]
                                         [:db/add (:e d) :logseq.property.table/filters value]))))))]
@@ -1299,6 +1302,11 @@
       (fix-missing-page-tag! conn)
       ;; TODO: remove this after RTC db fixed
       (let [data (deprecate-logseq-user-ns conn nil)]
+        (when (seq data)
+          (d/transact! conn data {:fix-db? true})))
+      (let [data1 (rename-repeated-properties conn nil)
+            data2 (rename-task-properties conn nil)
+            data (concat data1 data2)]
         (when (seq data)
           (d/transact! conn data {:fix-db? true})))
       (when (seq invalid-entity-ids)

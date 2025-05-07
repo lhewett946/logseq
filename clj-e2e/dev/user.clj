@@ -18,7 +18,7 @@
 (reset! config/*port 3001)
 ;; show ui
 (reset! config/*headless false)
-(reset! config/*slow-mo 100)
+(reset! config/*slow-mo 50)
 
 (def *futures (atom {}))
 
@@ -85,7 +85,7 @@
 
   (do
     (reset! config/*headless true)
-    (reset! config/*slow-mo 50)
+    (reset! config/*slow-mo 10)
     (dotimes [i 5]
       (run-multi-tabs-test)))
 
