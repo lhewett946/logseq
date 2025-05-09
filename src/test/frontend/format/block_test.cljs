@@ -72,7 +72,7 @@
          "-%"
          "-%")))
 
-(deftest monitor-normalize-randome-values-time
+(deftest monitor-normalize-random-values-time
   (testing "monitor time consumption of random values should not be processed"
     (are [x _y timeout] (>= timeout (:time (util/with-time (block/normalize-block x false))))
       "anreanre"
