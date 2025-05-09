@@ -43,7 +43,7 @@
 ;;   (?c1 :ml/parent ?p)
 ;;   (ubersymbol ?c ?c1)]]
 
-;; This way of writing the ruleset is optimized to find the descendants of some node. The way you originally wrote it is optimized to find the anscestors of some node.
+;; This way of writing the ruleset is optimized to find the descendants of some node. The way you originally wrote it is optimized to find the ancestors of some node.
 
 ;; from https://stackoverflow.com/questions/43784258/find-entities-whose-ref-to-many-attribute-contains-all-elements-of-input
 ;; Quote:
