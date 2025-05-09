@@ -368,7 +368,7 @@
 (defn page-name->map
   "Create a page's map structure given a original page name (string).
    map as input is supported for legacy compatibility.
-   `with-timestamp?`: assign timestampes to the map structure.
+   `with-timestamp?`: assign timestamps to the map structure.
     Useful when creating new pages from references or namespaces,
     as there's no chance to introduce timestamps via editing in page
    `skip-existing-page-check?`: if true, allows pages to have the same name"
