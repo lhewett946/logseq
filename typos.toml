@@ -1,9 +1,15 @@
+[default]
+extend-ignore-re = [
+    "fnd\\.",      # Ignore 'fnd.' as a false positive
+    "ANDed",       # Ignore 'ANDed' as a false positive
+    "snD-IY-ifK"   # Ignore this identifier as a false positive
+]
+
 [default.extend-words]
 # Technical words
 edn = "edn"
 datas = "datas"
 juxt = "juxt"
-Ded = "Ded"         # Shows up in ANDed
 referer = "referer" # This is a misspelling in the http spec so not much we can do
 
 # False positives
