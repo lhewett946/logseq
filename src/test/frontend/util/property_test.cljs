@@ -54,7 +54,7 @@
         nil)))
 
 (deftest test-build-properties-str
-  (are [x y] (= (#'gp-property/build-properties-str :mardown x) y)
+  (are [x y] (= (#'gp-property/build-properties-str :markdown x) y)
     {:title "a"}
     "title:: a\n"
     {:title "a/b/c"}
