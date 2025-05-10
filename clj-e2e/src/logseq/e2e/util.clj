@@ -104,7 +104,8 @@
 
 (defn exit-edit
   []
-  (k/esc))
+  (k/esc)
+  (assert/assert-non-editor-mode))
 
 (defn get-text
   [locator]
@@ -121,24 +122,6 @@
   [locator]
   (let [box (.boundingBox locator)]
     [(.-x box) (.-y box)]))
-
-(defn indent-outdent
-  [indent?]
-  (let [editor (get-editor)
-        [x1 _] (bounding-xy editor)
-        _ (if indent? (k/tab) (k/shift+tab))
-        [x2 _] (bounding-xy editor)]
-    (if indent?
-      (is (< x1 x2))
-      (is (> x1 x2)))))
-
-(defn indent
-  []
-  (indent-outdent true))
-
-(defn outdent
-  []
-  (indent-outdent false))
 
 (defn repeat-keyboard
   [n shortcut]
@@ -196,7 +179,7 @@
   [tag]
   (press-seq " #" {:delay 20})
   (press-seq tag)
-  (w/click (format "a.menu-link:has-text(\"%s\")" tag))
+  (w/click (first (w/query (format "a.menu-link:has-text(\"%s\")" tag))))
   ;; wait tag added on ui
   (assert/assert-is-visible
    (-> ".ls-block"

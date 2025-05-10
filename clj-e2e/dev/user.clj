@@ -9,6 +9,8 @@
             [logseq.e2e.keyboard :as k]
             [logseq.e2e.multi-tabs-test]
             [logseq.e2e.outliner-test]
+            [logseq.e2e.plugins-test]
+            [logseq.e2e.reference-test]
             [logseq.e2e.rtc-basic-test]
             [logseq.e2e.util :as util]
             [wally.main :as w]
@@ -47,12 +49,24 @@
   (->> (future (run-tests 'logseq.e2e.multi-tabs-test))
        (swap! *futures assoc :multi-tabs-test)))
 
+(defn run-reference-test
+  []
+  (->> (future (run-tests 'logseq.e2e.reference-test))
+       (swap! *futures assoc :reference-test)))
+
+(defn run-plugins-test
+  []
+  (->> (future (run-tests 'logseq.e2e.plugins-test))
+       (swap! *futures assoc :plugins-test)))
+
 (defn run-all-test
   []
   (run-tests 'logseq.e2e.commands-test
              'logseq.e2e.multi-tabs-test
              'logseq.e2e.outliner-test
-             'logseq.e2e.rtc-basic-test))
+             'logseq.e2e.rtc-basic-test
+             'logseq.e2e.plugins-test
+             'logseq.e2e.reference-test))
 
 (defn start
   []
@@ -86,8 +100,9 @@
   (do
     (reset! config/*headless true)
     (reset! config/*slow-mo 10)
-    (dotimes [i 5]
-      (run-multi-tabs-test)))
+    (run-tests 'logseq.e2e.reference-test)
+    (dotimes [i 10]
+      (run-tests 'logseq.e2e.reference-test)))
 
   ;;
   )
