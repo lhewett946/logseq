@@ -145,7 +145,7 @@
         "interactjs": "^1.10.17",
         "jszip": "3.8.0",
         "katex": "^0.16.21",
-        "marked": "^5.1.2",
+        "marked": "^15.0.11",
         "mldoc": "^1.5.9",
         "path": "0.12.7",
         "path-complete-extname": "1.0.0",
