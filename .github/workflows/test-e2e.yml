@@ -65,68 +65,6 @@ jobs:
           path: static.tar.gz
           retention-days: 1
 
-  # TODO: re-enable once fixed
-  #e2e-test-run:
-  #  needs: [ e2e-test-build ]
-  #  name: Test Shard ${{ matrix.shard }} Repeat ${{ matrix.repeat }}
-  #  runs-on: ubuntu-22.04
-  #  strategy:
-  #    matrix:
-  #      repeat: [1, 2]
-  #      shard: [1, 2, 3]
-  #
-  #  steps:
-  #    - name: Checkout
-  #      uses: actions/checkout@v4
-  #
-  #    - name: Download test build artifact
-  #      uses: actions/download-artifact@v4
-  #      with:
-  #        name: logseq-e2e-artifact
-  #
-  #    - name: Extract test Artifact
-  #      run: tar xzf static.tar.gz
-  #
-  #    - name: Set up Node
-  #      uses: actions/setup-node@v4
-  #      with:
-  #        node-version: ${{ env.NODE_VERSION }}
-  #
-  #    - name: Fetch yarn deps for E2E test
-  #      run: |
-  #        yarn install
-  #        cd static
-  #        yarn install
-  #        yarn rebuild:all
-  #      env:
-  #        PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: true
-  #
-  #    - name: Install Fluxbox
-  #      run: sudo apt-get update && sudo apt-get install -y fluxbox
-  #
-  #    # Emulate a virtual framebuffer on machines with no display hardware
-  #    - name: Run XVFB
-  #      run: Xvfb :1 -screen 0 1024x768x24 >/dev/null 2>&1 &
-  #
-  #    # Start a lightweight window manager to simulate window actions (maximize,restore etc)
-  #    - name: Start Fluxbox
-  #      run:  DISPLAY=:1.0 fluxbox >/dev/null 2>&1 &
-  #
-  #    - name: Run Playwright test
-  #      run: DISPLAY=:1.0 npx playwright test --reporter github --shard=${{ matrix.shard }}/3
-  #      env:
-  #        LOGSEQ_CI: true
-  #        DEBUG: "pw:api"
-  #        RELEASE: true # skip dev only test
-  #
-  #    - name: Save e2e artifacts
-  #      if: ${{ failure() }}
-  #      uses: actions/upload-artifact@v4
-  #      with:
-  #        name: e2e-repeat-report-${{ matrix.shard}}-${{ matrix.repeat }}
-  #        path: e2e-dump/*
-  #        retention-days: 1
-
   clj-e2e:
     name: CLJ Test E2E
     runs-on: ubuntu-latest
