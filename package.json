@@ -15,7 +15,7 @@
         "cross-env": "^7.0.3",
         "cssnano": "^5.1.13",
         "del": "^6.0.0",
-        "glob": "9.0.0",
+        "glob": "11.0.2",
         "gulp": "^4.0.2",
         "gulp-postcss": "^10.0.0",
         "gulp-replace": "^1.1.4",
