@@ -9,7 +9,17 @@ updates:
   - package-ecosystem: "npm"
     directories: 
       - "/"
+      - "/deps/common"
+      - "/deps/db"
+      - "/deps/graph-parser"
+      - "/deps/outliner"
+      - "/deps/publishing"
+      - "/libs"
       - "/resources"
+      - "/scripts"
+      - "/packages/amplify"
+      - "/packages/tldraw"
+      - "/packages/ui"
     schedule:
       interval: "weekly"
 
