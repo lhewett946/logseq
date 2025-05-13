@@ -7,7 +7,9 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
-    directory: "/"
+    directories: 
+      - "/"
+      - "/resources"
     schedule:
       interval: "weekly"
 
@@ -17,6 +19,6 @@ updates:
       interval: "weekly"
 
   - package-ecosystem: "gradle"
-    directory: "/"
+    directory: "/android"
     schedule:
       interval: "weekly"  
