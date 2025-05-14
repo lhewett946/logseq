@@ -35,7 +35,7 @@
         "postcss-import-ext-glob": "2.0.1",
         "postcss-nested": "6.0.0",
         "purgecss": "4.0.2",
-        "semver": "7.5.2",
+        "semver": "7.7.2",
         "shadow-cljs": "2.26.0",
         "stylelint": "^13.8.0",
         "stylelint-config-standard": "^20.0.0",
