@@ -3,9 +3,9 @@
   (:require [clojure.set :as set]
             [clojure.string :as string]
             [datascript.core :as d]
+            [logseq.db.common.entity-plus :as entity-plus]
             [logseq.db.common.order :as db-order]
             [logseq.db.frontend.class :as db-class]
-            [logseq.db.common.entity-plus :as entity-plus]
             [logseq.db.frontend.entity-util :as entity-util]
             [logseq.db.frontend.property :as db-property]
             [logseq.db.frontend.property.type :as db-property-type]
@@ -249,6 +249,7 @@
 (def page-or-block-attrs
   "Common attributes for page and normal blocks"
   [[:block/uuid :uuid]
+   [:block/title :string]
    [:block/created-at :int]
    [:block/updated-at :int]
    ;; Injected by update-properties-in-ents
@@ -261,7 +262,6 @@
 (def page-attrs
   "Common attributes for pages"
   [[:block/name :string]
-   [:block/title :string]
    [:block/path-refs {:optional true} [:set :int]]])
 
 (def property-attrs
@@ -339,8 +339,7 @@
 
 (def block-attrs
   "Common attributes for normal blocks"
-  [[:block/title :string]
-   [:block/parent :int]
+  [[:block/parent :int]
    [:block/order block-order]
    ;; refs
    [:block/page :int]
@@ -353,8 +352,7 @@
   (vec
    (concat
     [:map]
-    [[:block/title :string]
-     [:block/parent :int]
+    [[:block/parent :int]
      ;; These blocks only associate with pages of type "whiteboard"
      [:block/page :int]
      [:block/path-refs {:optional true} [:set :int]]]
@@ -367,7 +365,7 @@
     [:map]
     [[:logseq.property/value [:or :string :double :boolean]]
      [:logseq.property/created-from-property :int]]
-    (remove #(#{:block/title :logseq.property/created-from-property} (first %)) block-attrs)
+    (remove #(#{:logseq.property/created-from-property} (first %)) block-attrs)
     page-or-block-attrs)))
 
 (def property-history-block*
@@ -400,8 +398,8 @@
      [:logseq.property/value {:optional true} [:or :string :double]]
      [:logseq.property/created-from-property :int]
      [:block/closed-value-property {:optional true} [:set :int]]]
-    (remove #(#{:block/title :logseq.property/created-from-property} (first %)) block-attrs)
-    page-or-block-attrs)))
+    (remove #(#{:logseq.property/created-from-property} (first %)) block-attrs)
+    (remove #(#{:block/title} (first %)) page-or-block-attrs))))
 
 (def closed-value-block
   "A closed value for a property with closed/allowed values"
@@ -482,14 +480,10 @@
                        :file-block
                        (:logseq.property.history/block d)
                        :property-history-block
-
                        (:block/closed-value-property d)
                        :closed-value-block
-
-                       (and (:logseq.property/created-from-property d)
-                            (:logseq.property/value d))
+                       (and (:logseq.property/created-from-property d) (:logseq.property/value d))
                        :property-value-block
-
                        (:block/uuid d)
                        :block
                        (= (:db/ident d) :logseq.property/empty-placeholder)
