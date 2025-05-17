@@ -20,7 +20,8 @@ module.exports = {
     'postcss-import-ext-glob': {},
     'postcss-import': {},
     'postcss-functions': { functions: { or } },
-    'tailwindcss/nesting': 'postcss-nested',
+    'postcss-nesting': {},
+    '@tailwindcss/postcss': {},
     tailwindcss: {},
     ...(process.env.NODE_ENV === 'production' ? { cssnano: {} } : {})
   }
