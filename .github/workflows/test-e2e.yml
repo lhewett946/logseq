@@ -103,7 +103,7 @@ jobs:
           ls -lR ./public
 
       - name: Run e2e tests
-        run: bb dev
+        run: timeout 30m bb dev
         env:
           DEBUG: "pw:api"
         working-directory: clj-e2e

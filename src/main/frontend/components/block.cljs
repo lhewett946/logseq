@@ -976,8 +976,9 @@
 
 (rum/defc page-cp
   [config page]
-  (rum/with-key (page-cp-inner config page)
-    (or (str (:db/id page)) (str (:block/uuid page)) (:block/name page))))
+  (let [id (or (:db/id page) (:block/uuid page) (:block/name page))]
+    (rum/with-key (page-cp-inner config page)
+      (str id))))
 
 (rum/defc asset-reference
   [config title path]
@@ -1067,51 +1068,62 @@
 (declare block-positioned-properties)
 (rum/defc page-reference < rum/reactive db-mixins/query
   "Component for page reference"
-  [{:keys [html-export? nested-link? show-brackets? id] :as config} uuid-or-title* label]
+  [{:keys [html-export? nested-link? show-brackets? id] :as config*} uuid-or-title* label]
   (when uuid-or-title*
     (let [uuid-or-title (if (string? uuid-or-title*)
-                          (string/trim uuid-or-title*)
+                          (let [str-id (string/trim uuid-or-title*)]
+                            (if (util/uuid-string? str-id)
+                              (parse-uuid str-id)
+                              str-id))
                           uuid-or-title*)
-          show-brackets? (if (some? show-brackets?) show-brackets? (state/show-brackets?))
-          contents-page? (= "contents" (string/lower-case (str id)))
-          block* (db/get-page uuid-or-title)
-          block (or (some-> (:db/id block*) db/sub-block) block*)
-          config' (assoc config
-                         :label (mldoc/plain->text label)
-                         :contents-page? contents-page?
-                         :show-icon? true?)
-          asset? (some? (:logseq.property.asset/type block))
-          brackets? (and (or show-brackets? nested-link?)
-                         (not html-export?)
-                         (not contents-page?))]
-      (when-not (= (:db/id block) (:db/id (:block config)))
-        (cond
-          (and asset? (img-audio-video? block))
-          (asset-cp config block)
+          self-reference? (when (set? (:ref-set config*))
+                            (contains? (:ref-set config*) uuid-or-title))]
+      (when-not self-reference?
+        (let [config (update config* :ref-set (fn [s]
+                                                (let [bid (:block/uuid (:block config*))]
+                                                  (if (nil? s)
+                                                    #{bid}
+                                                    (conj s bid uuid-or-title)))))
+              show-brackets? (if (some? show-brackets?) show-brackets? (state/show-brackets?))
+              contents-page? (= "contents" (string/lower-case (str id)))
+              block* (db/get-page uuid-or-title)
+              block (or (some-> (:db/id block*) db/sub-block) block*)
+              config' (assoc config
+                             :label (mldoc/plain->text label)
+                             :contents-page? contents-page?
+                             :show-icon? true?)
+              asset? (some? (:logseq.property.asset/type block))
+              brackets? (and (or show-brackets? nested-link?)
+                             (not html-export?)
+                             (not contents-page?))]
+          (when-not (= (:db/id block) (:db/id (:block config)))
+            (cond
+              (and asset? (img-audio-video? block))
+              (asset-cp config block)
 
-          (and (string? uuid-or-title) (string/ends-with? uuid-or-title ".excalidraw"))
-          [:div.draw {:on-click (fn [e]
-                                  (.stopPropagation e))}
-           (excalidraw uuid-or-title (:block/uuid config))]
+              (and (string? uuid-or-title) (string/ends-with? uuid-or-title ".excalidraw"))
+              [:div.draw {:on-click (fn [e]
+                                      (.stopPropagation e))}
+               (excalidraw uuid-or-title (:block/uuid config))]
 
-          :else
-          [:span.page-reference
-           {:data-ref (str uuid-or-title)}
-           (when brackets?
-             [:span.text-gray-500.bracket page-ref/left-brackets])
-           (when (and (config/db-based-graph?) (ldb/class-instance? (db/entity :logseq.class/Task) block))
-             [:div.inline-block
-              {:style {:margin-right 1
-                       :margin-top -2
-                       :vertical-align "middle"}
-               :on-pointer-down (fn [e]
-                                  (util/stop e))}
-              (block-positioned-properties config block :block-left)])
-           (page-cp config' (if (uuid? uuid-or-title)
-                              {:block/uuid uuid-or-title}
-                              {:block/name uuid-or-title}))
-           (when brackets?
-             [:span.text-gray-500.bracket page-ref/right-brackets])])))))
+              :else
+              [:span.page-reference
+               {:data-ref (str uuid-or-title)}
+               (when brackets?
+                 [:span.text-gray-500.bracket page-ref/left-brackets])
+               (when (and (config/db-based-graph?) (ldb/class-instance? (db/entity :logseq.class/Task) block))
+                 [:div.inline-block
+                  {:style {:margin-right 1
+                           :margin-top -2
+                           :vertical-align "middle"}
+                   :on-pointer-down (fn [e]
+                                      (util/stop e))}
+                  (block-positioned-properties config block :block-left)])
+               (page-cp config' (if (uuid? uuid-or-title)
+                                  {:block/uuid uuid-or-title}
+                                  {:block/name uuid-or-title}))
+               (when brackets?
+                 [:span.text-gray-500.bracket page-ref/right-brackets])])))))))
 
 (defn- latex-environment-content
   [name option content]
@@ -1319,29 +1331,32 @@
 
 (rum/defc block-reference
   [config id label]
-  (if (config/db-based-graph?)
-    (page-reference config id label)
-    (let [block-id (and id (if (uuid? id) id (parse-uuid id)))
-          [block set-block!] (hooks/use-state (db/entity [:block/uuid block-id]))
-          self-reference? (when (set? (:ref-set config))
-                            (contains? (:ref-set config) block-id))]
-      (hooks/use-effect!
-       (fn []
-         (p/let [block (db-async/<get-block (state/get-current-repo)
-                                            block-id
-                                            {:children? false
-                                             :skip-refresh? true})]
-           (set-block! block)))
-       [])
-      (when-not self-reference?
-        (if block
-          (let [config' (update config :ref-set (fn [s]
-                                                  (let [bid (:block/uuid (:block config))]
-                                                    (if (nil? s)
-                                                      #{bid}
-                                                      (conj s bid block-id)))))]
-            (block-reference-aux config' block label))
-          (invalid-node-ref block-id))))))
+  (let [block-id (and id (if (uuid? id) id (parse-uuid id)))
+        [block set-block!] (hooks/use-state (db/entity [:block/uuid block-id]))
+        self-reference? (when (set? (:ref-set config))
+                          (contains? (:ref-set config) block-id))]
+    (hooks/use-effect!
+     (fn []
+       (p/let [block (db-async/<get-block (state/get-current-repo)
+                                          block-id
+                                          {:children? false
+                                           :skip-refresh? true})]
+         (set-block! block)))
+     [])
+    (when-not self-reference?
+      (cond
+        (config/db-based-graph?)
+        (page-reference config block-id label)
+
+        block
+        (let [config' (update config :ref-set (fn [s]
+                                                (let [bid (:block/uuid (:block config))]
+                                                  (if (nil? s)
+                                                    #{bid}
+                                                    (conj s bid block-id)))))]
+          (block-reference-aux config' block label))
+        :else
+        (invalid-node-ref block-id)))))
 
 (defn- render-macro
   [config name arguments macro-content format]
@@ -2046,7 +2061,6 @@
         selected? (contains? selected block-id)]
     (when-not selected?
       (util/clear-selection!)
-      (state/conj-selection-block! (gdom/getElement block-id) :down)
       (editor-handler/highlight-block! uuid)))
 
   (editor-handler/block->data-transfer! uuid event false)
@@ -2165,7 +2179,7 @@
                                         (reset! *bullet-dragging? true)
                                         (util/stop-propagation event)
                                         (bullet-drag-start event block uuid block-id))
-                       :on-drag-end (fn [_]
+                       :on-drag-end (fn [_e]
                                       (reset! *bullet-dragging? false))
                        :blockid (str uuid)
                        :class (str (when collapsed? "bullet-closed")
