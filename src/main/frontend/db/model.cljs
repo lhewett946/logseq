@@ -99,7 +99,7 @@ independent of format as format specific heading characters are stripped"
                   (let [block (db-utils/entity repo block-id)
                         ref-tags (distinct (concat (:block/tags block) (:block/refs block)))]
                     (= (-> block-content
-                           (db-content/id-ref->title-ref ref-tags true)
+                           (db-content/id-ref->title-ref ref-tags)
                            (db-content/content-id-ref->page ref-tags)
                            heading-content->route-name)
                        (string/lower-case external-content))))
@@ -444,11 +444,6 @@ independent of format as format specific heading characters are stripped"
   "sanitized page-name only"
   [page-name]
   (ldb/journal? (ldb/get-page (conn/get-db) page-name)))
-
-(defn get-classes-with-property
-  "Get classes which have given property as a class property"
-  [property-id]
-  (ldb/get-classes-with-property (conn/get-db) property-id))
 
 (defn get-all-referenced-blocks-uuid
   "Get all uuids of blocks with any back link exists."

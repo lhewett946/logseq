@@ -81,7 +81,7 @@ jobs:
         working-directory: deps/graph-parser
   
       - name: Run ClojureScript tests
-        run: clojure -M:test
+        run: REPEATABLE_IDENTS=true clojure -M:test
         working-directory: deps/graph-parser
   
       - name: Run nbb-logseq tests
