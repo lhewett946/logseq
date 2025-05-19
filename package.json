@@ -164,7 +164,7 @@
         "react-resize-context": "3.0.0",
         "react-textarea-autosize": "8.3.3",
         "react-transition-group": "4.3.0",
-        "react-virtuoso": "4.12.5",
+        "react-virtuoso": "4.12.7",
         "remove-accents": "0.4.2",
         "sanitize-filename": "1.6.3",
         "send-intent": "^7.0.0",
