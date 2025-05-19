@@ -21,14 +21,14 @@ updates:
       - "/packages/tldraw"
       - "/packages/ui"
     schedule:
-      interval: "weekly"
+      interval: "daily"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
 
   - package-ecosystem: "gradle"
     directory: "/android"
     schedule:
-      interval: "weekly"  
+      interval: "daily"  
