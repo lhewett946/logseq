@@ -170,7 +170,7 @@
         "send-intent": "^7.0.0",
         "shepherd.js": "^9.1.0",
         "tailwind-capitalize-first-letter": "^1.0.4",
-        "threads": "1.6.5",
+        "threads": "1.7.0",
         "url": "^0.11.0",
         "yargs-parser": "20.2.4"
     },
