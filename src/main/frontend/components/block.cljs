@@ -2691,10 +2691,14 @@
   (rum/local false ::hover-container?)
   [state block tag config popup-opts]
   (let [*hover? (::hover? state)
-        *hover-container? (::hover-container? state)]
+        *hover-container? (::hover-container? state)
+        private-tag? (ldb/private-tags (:db/ident tag))]
     [:div.block-tag.items-center.relative
      {:key (str "tag-" (:db/id tag))
-      :class (if @*hover? "bg-gray-03 rounded pr-1" "px-1")
+      :class (if @*hover?
+               (str "bg-gray-03 rounded "
+                    (if private-tag? "px-1" "pr-1"))
+               "pl-2 pr-1")
       :on-mouse-over #(reset! *hover-container? true)
       :on-mouse-out #(reset! *hover-container? false)}
      [:div.flex.items-center
@@ -2722,10 +2726,12 @@
                                   :on-click #(db-property-handler/delete-property-value! (:db/id block) :block/tags (:db/id tag))}
                                  "Remove tag"))])
                            popup-opts))}
-      (if (and @*hover? (not (ldb/private-tags (:db/ident tag))))
+      (if (and @*hover? (not private-tag?))
         [:a.inline-flex.text-muted-foreground
          {:title "Remove this tag"
-          :style {:margin-top 1}
+          :style {:margin-top 1
+                  :padding-left 2
+                  :margin-right 2}
           :on-pointer-down
           (fn [e]
             (util/stop e)
@@ -3047,7 +3053,6 @@
      (block-content config block edit-input-id block-id *show-query?))))
 
 (rum/defcs ^:large-vars/cleanup-todo block-content-or-editor < rum/reactive
-  (rum/local false ::hover?)
   [state config {:block/keys [uuid] :as block} {:keys [edit-input-id block-id edit? hide-block-refs-count? refs-count *hide-block-refs? *show-query?]}]
   (let [format (if (config/db-based-graph? (state/get-current-repo))
                  :markdown
@@ -3084,7 +3089,10 @@
                         :format format}
                        edit-input-id
                        config))]
-         [:div.flex.flex-1.w-full.block-content-wrapper {:style {:display "flex"}}
+         [:div.flex.flex-1.w-full.block-content-wrapper
+          {:style {:display "flex"}}
+          (when-let [actions-cp (:page-title-actions-cp config)]
+            (actions-cp block))
           (block-content-with-error config block edit-input-id block-id *show-query? editor-box)
 
           (when (and (not hide-block-refs-count?)
@@ -3639,8 +3647,6 @@
 
         [:div.flex.flex-col.w-full
          [:div.block-main-content.flex.flex-row.gap-2
-          (when-let [actions-cp (:page-title-actions-cp config)]
-            (actions-cp block))
           (when page-icon
             page-icon)
 
