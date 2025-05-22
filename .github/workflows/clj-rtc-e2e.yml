@@ -48,7 +48,7 @@ jobs:
           bb: ${{ env.BABASHKA_VERSION }}
 
       - name: Clojure cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: clojure-deps
         with:
           path: |
@@ -62,7 +62,7 @@ jobs:
         run: clojure -A:cljs -P
 
       - name: Shadow-cljs cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .shadow-cljs
           # ensure update cache every time
