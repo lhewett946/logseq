@@ -1,7 +1,7 @@
 (ns frontend.extensions.excalidraw
   (:require ;; NOTE: Always use production build of excalidraw
             ;; See-also: https://github.com/excalidraw/excalidraw/pull/3330
-   ["@excalidraw/excalidraw/dist/excalidraw.production.min" :refer [Excalidraw serializeAsJSON]]
+   ["@excalidraw/excalidraw" :refer [Excalidraw serializeAsJSON]]
    [clojure.string :as string]
    [frontend.config :as config]
    [frontend.db :as db]
