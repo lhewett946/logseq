@@ -1,15 +1,17 @@
 (ns logseq.e2e.rtc-extra-test
   (:require
-   [clojure.test :refer [deftest testing is use-fixtures run-test]]
+   [clojure.test :refer [deftest testing is use-fixtures run-test run-tests]]
    [com.climate.claypoole :as cp]
    [logseq.e2e.assert :as assert]
    [logseq.e2e.block :as b]
+   [logseq.e2e.custom-report :as custom-report]
    [logseq.e2e.fixtures :as fixtures :refer [*page1 *page2]]
    [logseq.e2e.graph :as graph]
    [logseq.e2e.keyboard :as k]
    [logseq.e2e.locator :as loc]
    [logseq.e2e.outliner-basic-test :as outliner-basic-test]
    [logseq.e2e.page :as page]
+   [logseq.e2e.property-basic-test :as property-basic-test]
    [logseq.e2e.rtc :as rtc]
    [logseq.e2e.settings :as settings]
    [logseq.e2e.util :as util]
@@ -33,11 +35,13 @@
       (graph/wait-for-remote-graph graph-name)
       (graph/switch-graph graph-name true))
 
-    (f)
-
-    ;; cleanup
-    (w/with-page @*page2
-      (graph/remove-remote-graph graph-name))))
+    (binding [custom-report/*preserve-graph* false]
+      (f)
+      ;; cleanup
+      (if custom-report/*preserve-graph*
+        (println "Don't remove graph: " graph-name)
+        (w/with-page @*page2
+          (graph/remove-remote-graph graph-name))))))
 
 (defn- new-logseq-page
   "new logseq page and switch to this page on both page1 and page2"
@@ -81,9 +85,19 @@
          [@*page1 @*page2])]
     (assert/assert-graph-summary-equal p1-summary p2-summary)))
 
+(def status->icon-name
+  {"Backlog" "Backlog"
+   "Todo" "Todo"
+   "Doing" "InProgress50"
+   "In review" "InReview"
+   "Done" "Done"
+   "Canceled" "Cancelled"})
+
+(def priorities ["No priority" "Low" "Medium" "High" "Urgent"])
+
 (defn- validate-task-blocks
   []
-  (let [icon-names ["Backlog" "Todo" "InProgress50" "InReview" "Done" "Cancelled"]
+  (let [icon-names (vals status->icon-name)
         icon-name->count
         (w/with-page @*page2
           (into
@@ -99,14 +113,20 @@
 
 (defn- insert-task-blocks
   [title-prefix]
-  (doseq [status ["Backlog" "Todo" "Doing" "In review" "Done" "Canceled"]
-          priority ["No priority" "Low" "Medium" "High" "Urgent"]]
+  (doseq [status (keys status->icon-name)
+          priority priorities]
     (b/new-block (str title-prefix "-" status "-" priority))
     (util/input-command status)
     (util/input-command priority)))
 
 (defn- update-task-blocks
-  [])
+  []
+  (let [qs-partitions (partition-all 5 (seq (.all (loc/filter ".ls-block" :has ".ui__icon"))))]
+    (doseq [q-seq qs-partitions]
+      (doseq [q q-seq]
+        (w/click q)
+        (util/input-command (rand-nth (keys status->icon-name)))
+        (util/input-command (rand-nth priorities))))))
 
 (deftest rtc-task-blocks-test
   (let [insert-task-blocks-in-page2
@@ -116,11 +136,25 @@
                   (rtc/with-wait-tx-updated
                     (insert-task-blocks "t1"))]
               (reset! *latest-remote-tx remote-tx))
-            ;; TODO: more operations
-            (util/exit-edit)))]
-    (testing "rtc-stop app1, add some task blocks, then rtc-start on app1"
+            (util/exit-edit)))
+        update-task-blocks-in-page2
+        (fn [*latest-remote-tx]
+          (w/with-page @*page2
+            (let [{:keys [_local-tx remote-tx]}
+                  (rtc/with-wait-tx-updated
+                    (update-task-blocks))]
+              (reset! *latest-remote-tx remote-tx))))]
+    (testing "add some task blocks while rtc disconnected on page1"
       (let [*latest-remote-tx (atom nil)]
         (with-stop-restart-rtc @*page1 #(insert-task-blocks-in-page2 *latest-remote-tx))
+        (w/with-page @*page1
+          (rtc/wait-tx-update-to @*latest-remote-tx))
+        (validate-task-blocks)
+        (validate-2-graphs)))
+
+    (testing "update task blocks while rtc disconnected on page1"
+      (let [*latest-remote-tx (atom nil)]
+        (with-stop-restart-rtc @*page1 #(update-task-blocks-in-page2 *latest-remote-tx))
         (w/with-page @*page1
           (rtc/wait-tx-update-to @*latest-remote-tx))
         (validate-task-blocks)
@@ -134,35 +168,15 @@
         (w/with-page @*page1
           (rtc/wait-tx-update-to @*latest-remote-tx))
         (validate-task-blocks)
-        (validate-2-graphs)))))
+        (validate-2-graphs)))
 
-(defn- add-new-properties
-  [title-prefix]
-  (b/new-blocks (map #(str title-prefix "-" %) ["Text" "Number" "Date" "DateTime" "Checkbox" "Url" "Node"]))
-  (doseq [property-type ["Text" "Number" "Date" "DateTime" "Checkbox" "Url" "Node"]]
-    (let [property-name (str "p-" title-prefix "-" property-type)]
-      (w/click (util/get-by-text (str title-prefix "-" property-type) true))
-      (k/press "Control+e")
-      (util/input-command "Add new property")
-      (util/input property-name)
-      (w/click (w/get-by-text "New option:"))
-      (assert/assert-is-visible (w/get-by-text "Select a property type"))
-      (w/click (loc/and "span" (util/get-by-text property-type true)))
-      (case property-type
-        "Text" (util/input "Text")
-        "Number" (do (assert/assert-is-visible (format "input[placeholder='%s']" (str "Set " property-name)))
-                     (util/input "111")
-                     (w/click (w/get-by-text "New option:")))
-        ("DateTime" "Date") (do
-                              (assert/assert-is-visible ".ls-property-dialog")
-                              (k/enter)
-                              (k/esc))
-        "Checkbox" nil
-        "Url" nil
-        "Node" (do
-                 (w/click (w/get-by-text "Skip choosing tag"))
-                 (util/input (str title-prefix "-Node-value"))
-                 (w/click (w/get-by-text "New option:")))))))
+    (testing "update task blocks while rtc connected on page1"
+      (let [*latest-remote-tx (atom nil)]
+        (update-task-blocks-in-page2 *latest-remote-tx)
+        (w/with-page @*page1
+          (rtc/wait-tx-update-to @*latest-remote-tx))
+        (validate-task-blocks)
+        (validate-2-graphs)))))
 
 (deftest rtc-property-test
   (let [insert-new-property-blocks-in-page2
@@ -170,7 +184,7 @@
           (w/with-page @*page2
             (let [{:keys [_local-tx remote-tx]}
                   (rtc/with-wait-tx-updated
-                    (add-new-properties title-prefix))]
+                    (property-basic-test/add-new-properties title-prefix))]
               (reset! *latest-remote-tx remote-tx))))]
     (testing "page1: rtc-stop
 page2: create some user properties with different type
