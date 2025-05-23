@@ -78,7 +78,6 @@
   [db {:keys [theme journal? orphan-pages? builtin-pages? excluded-pages? created-at-filter]} color-property color-settings]
   (let [dark? (= "dark" theme)
         relation (ldb/get-pages-relation db journal?)
-        tagged-pages (ldb/get-all-tagged-pages db)
         namespaces (gp-db/get-all-namespace-relation db)
         full-pages (ldb/get-all-pages db)
         db-based? (entity-plus/db-based-graph? db)
@@ -96,7 +95,7 @@
                            (if db-based?
                              (get p :logseq.property/exclude-from-graph-view)
                              (get-in p [:block/properties :exclude-from-graph-view]))))))
-        links (concat relation tagged-pages namespaces)
+        links (concat relation namespaces)
         linked (set (mapcat identity links))
         build-in-pages (->> (if db-based? sqlite-create-graph/built-in-pages-names gp-db/built-in-pages-names)
                             (map string/lower-case)

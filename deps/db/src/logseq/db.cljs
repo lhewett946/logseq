@@ -551,13 +551,6 @@
                 [?block :block/refs ?ref-page]])]
       (d/q q db))))
 
-(defn get-all-tagged-pages
-  [db]
-  (d/q '[:find ?page ?tag
-         :where
-         [?page :block/tags ?tag]]
-       db))
-
 (defn get-schema
   "Returns schema for given repo"
   [repo]
