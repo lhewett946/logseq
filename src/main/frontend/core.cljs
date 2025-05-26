@@ -52,8 +52,9 @@
 (defonce root (rdc/createRoot (.getElementById js/document "root")))
 
 (defn ^:export start []
-  (when config/dev?
-    (md/start!))
+  ;; TODO: reinstate this
+  ;;(when config/dev?
+  ;;  (md/start!))
   (set-router!)
 
   (.render ^js root (page/current-page))
