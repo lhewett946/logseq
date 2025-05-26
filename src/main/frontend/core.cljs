@@ -17,7 +17,7 @@
             [frontend.spec]
             [logseq.api]
             [logseq.db.frontend.kv-entity]
-            [malli.dev.cljs :as md]
+            ;;[malli.dev.cljs :as md]
             [reitit.frontend :as rf]
             [reitit.frontend.easy :as rfe]))
 
@@ -52,7 +52,6 @@
 (defonce root (rdc/createRoot (.getElementById js/document "root")))
 
 (defn ^:export start []
-  ;; TODO: reinstate this
   ;;(when config/dev?
   ;;  (md/start!))
   (set-router!)
