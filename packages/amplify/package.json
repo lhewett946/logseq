@@ -12,7 +12,8 @@
   "devDependencies": {
     "buffer": "^5.5.0",
     "parcel": "^2.8.3",
-    "punycode": "^1.4.1"
+    "punycode": "^1.4.1",
+    "querystring-es3": "^0.2.1"
   },
   "dependencies": {
     "@aws-amplify/ui-react": "^4.3.8",
