@@ -7,13 +7,12 @@
   resolved "https://registry.yarnpkg.com/@alloc/quick-lru/-/quick-lru-5.2.0.tgz#7bf68b20c0a350f936915fcae06f58e32007ce30"
   integrity sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==
 
-"@axe-core/playwright@=4.4.4":
-  version "4.4.4"
-  resolved "https://registry.yarnpkg.com/@axe-core/playwright/-/playwright-4.4.4.tgz#3786c5f6bba38d1991b608584b00ae2744544573"
-  integrity sha512-VA7MR1WCqW5tFcUGCXDaaqV9pJUCdOGIR4DiZJrOxGjeRYxz3VwyMc1MDg/yiJ5fQA/QYMx+w0mvqYEr3CPx7w==
+"@axe-core/playwright@=4.7.1":
+  version "4.7.1"
+  resolved "https://registry.yarnpkg.com/@axe-core/playwright/-/playwright-4.7.1.tgz#e0ed94013da9bdd9d221483c5f7c9ff2560e53de"
+  integrity sha512-09UDwLChlGiqw9004QJib6Maesy99EOZ9zsLfhBYAt2s5UwufabnD+MoTAmwe+PCv2Jex9k1taeUhebDwIJKqw==
   dependencies:
-    axe-core "^4.4.2"
-    playwright ">= 1.0.0"
+    axe-core "^4.7.0"
 
 "@babel/code-frame@^7.0.0":
   version "7.27.1"
@@ -1342,7 +1341,7 @@ available-typed-arrays@^1.0.7:
   dependencies:
     possible-typed-array-names "^1.0.0"
 
-axe-core@^4.4.2:
+axe-core@^4.7.0:
   version "4.10.3"
   resolved "https://registry.yarnpkg.com/axe-core/-/axe-core-4.10.3.tgz#04145965ac7894faddbac30861e5d8f11bfd14fc"
   integrity sha512-Xm7bpRXnDSX2YE2YFfBk2FnF0ep6tmG7xPh8iHee8MIcrgq762Nkce856dYtJYLkuIoYZvGfTs/PbZhideTcEg==
@@ -5627,7 +5626,7 @@ playwright-core@1.52.0:
   resolved "https://registry.yarnpkg.com/playwright-core/-/playwright-core-1.52.0.tgz#238f1f0c3edd4ebba0434ce3f4401900319a3dca"
   integrity sha512-l2osTgLXSMeuLZOML9qYODUQoPPnUsKsb5/P6LJ2e6uPKXUdPK5WYhN4z03G+YNbWmGDY4YENauNu4ZKczreHg==
 
-playwright@1.52.0, "playwright@>= 1.0.0":
+playwright@1.52.0:
   version "1.52.0"
   resolved "https://registry.yarnpkg.com/playwright/-/playwright-1.52.0.tgz#26cb9a63346651e1c54c8805acfd85683173d4bd"
   integrity sha512-JAwMNMBlxJ2oD1kce4KPtMkDeKGHQstdpFPcPH3maElAXon/QZeTvtsfXmTMRyO9TslfoYOXkSsvao2nE1ilTw==
