@@ -107,7 +107,7 @@
         "@dnd-kit/sortable": "^7.0.2",
         "@emoji-mart/data": "^1.1.2",
         "@emoji-mart/react": "^1.1.1",
-        "@excalidraw/excalidraw": "0.16.4",
+        "@excalidraw/excalidraw": "0.18.0",
         "@glidejs/glide": "^3.6.0",
         "@highlightjs/cdn-assets": "10.4.1",
         "@isomorphic-git/lightning-fs": "^4.6.0",
