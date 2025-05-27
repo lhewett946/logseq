@@ -2611,6 +2611,7 @@
 
             :else
             (let [block (or (db/entity [:block/uuid (:block/uuid block)]) block)]
+              (util/mobile-keep-keyboard-open)
               (editor-handler/clear-selection!)
               (editor-handler/unhighlight-blocks!)
               (let [f #(p/do!
@@ -3075,46 +3076,48 @@
      (when (and db-based? (not table?)) (block-positioned-properties config block :block-left))
      [:div.block-content-or-editor-inner
       [:div.block-row.flex.flex-1.flex-row.gap-1.items-center
-       (if (and editor-box edit? (not type-block-editor?))
-         [:div.editor-wrapper.flex.flex-1.w-full
-          {:id editor-id
-           :class (util/classnames [{:opacity-50 (boolean (or (ldb/built-in? block) (ldb/journal? block)))}])}
-          (ui/catch-error
-           (ui/block-error "Something wrong in the editor" {})
-           (editor-box {:block block
-                        :block-id uuid
-                        :block-parent-id block-id
-                        :format format}
-                       edit-input-id
-                       config))]
-         [:div.flex.flex-1.w-full.block-content-wrapper
-          {:style {:display "flex"}}
-          (when-let [actions-cp (:page-title-actions-cp config)]
-            (actions-cp block))
-          (block-content-with-error config block edit-input-id block-id *show-query? editor-box)
+       (let [content-cp [:div.flex.flex-1.w-full.block-content-wrapper
+                         {:style {:display "flex"}}
+                         (when-let [actions-cp (:page-title-actions-cp config)]
+                           (actions-cp block))
+                         (block-content-with-error config block edit-input-id block-id *show-query? editor-box)
 
-          (when (and (not hide-block-refs-count?)
-                     (not named?)
-                     (not (:table-block-title? config)))
-            [:div.flex.flex-row.items-center
-             (when (and (:embed? config)
-                        (:embed-parent config))
-               [:a.opacity-70.hover:opacity-100.svg-small.inline
-                {:on-pointer-down (fn [e]
-                                    (util/stop e)
-                                    (when-let [block (:embed-parent config)]
-                                      (editor-handler/edit-block! block :max)))}
-                svg/edit])
+                         (when (and (not hide-block-refs-count?)
+                                    (not named?)
+                                    (not (:table-block-title? config)))
+                           [:div.flex.flex-row.items-center
+                            (when (and (:embed? config)
+                                       (:embed-parent config))
+                              [:a.opacity-70.hover:opacity-100.svg-small.inline
+                               {:on-pointer-down (fn [e]
+                                                   (util/stop e)
+                                                   (when-let [block (:embed-parent config)]
+                                                     (editor-handler/edit-block! block :max)))}
+                               svg/edit])
 
-             (when block-reference-only?
-               [:a.opacity-70.hover:opacity-100.svg-small.inline
-                {:on-pointer-down (fn [e]
-                                    (util/stop e)
-                                    (editor-handler/edit-block! block :max))}
-                svg/edit])])
+                            (when block-reference-only?
+                              [:a.opacity-70.hover:opacity-100.svg-small.inline
+                               {:on-pointer-down (fn [e]
+                                                   (util/stop e)
+                                                   (editor-handler/edit-block! block :max))}
+                               svg/edit])])
 
-          (when-not (or (:table? config) (:property? config) (:page-title? config))
-            (block-refs-count block refs-count *hide-block-refs?))])
+                         (when-not (or (:table? config) (:property? config) (:page-title? config))
+                           (block-refs-count block refs-count *hide-block-refs?))]
+             editor-cp [:div.editor-wrapper.flex.flex-1.w-full
+                        {:id editor-id
+                         :class (util/classnames [{:opacity-50 (boolean (or (ldb/built-in? block) (ldb/journal? block)))}])}
+                        (ui/catch-error
+                         (ui/block-error "Something wrong in the editor" {})
+                         (editor-box {:block block
+                                      :block-id uuid
+                                      :block-parent-id block-id
+                                      :format format}
+                                     edit-input-id
+                                     config))]]
+         (if (and editor-box edit? (not type-block-editor?))
+           editor-cp
+           content-cp))
 
        (when-not (:table-block-title? config)
          [:div.ls-block-right.flex.flex-row.items-center.self-start.gap-1

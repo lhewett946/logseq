@@ -7,7 +7,6 @@
    [logseq.e2e.custom-report :as custom-report]
    [logseq.e2e.fixtures :as fixtures :refer [*page1 *page2]]
    [logseq.e2e.graph :as graph]
-   [logseq.e2e.keyboard :as k]
    [logseq.e2e.locator :as loc]
    [logseq.e2e.outliner-basic-test :as outliner-basic-test]
    [logseq.e2e.page :as page]
@@ -146,17 +145,19 @@
               (reset! *latest-remote-tx remote-tx))))]
     (testing "add some task blocks while rtc disconnected on page1"
       (let [*latest-remote-tx (atom nil)]
-        (with-stop-restart-rtc @*page1 #(insert-task-blocks-in-page2 *latest-remote-tx))
-        (w/with-page @*page1
-          (rtc/wait-tx-update-to @*latest-remote-tx))
+        (rtc/with-stop-restart-rtc
+          [@*page1]
+          [@*page1 (rtc/wait-tx-update-to @*latest-remote-tx)]
+          (insert-task-blocks-in-page2 *latest-remote-tx))
         (validate-task-blocks)
         (validate-2-graphs)))
 
     (testing "update task blocks while rtc disconnected on page1"
       (let [*latest-remote-tx (atom nil)]
-        (with-stop-restart-rtc @*page1 #(update-task-blocks-in-page2 *latest-remote-tx))
-        (w/with-page @*page1
-          (rtc/wait-tx-update-to @*latest-remote-tx))
+        (rtc/with-stop-restart-rtc
+          [@*page1]
+          [@*page1 (rtc/wait-tx-update-to @*latest-remote-tx)]
+          (update-task-blocks-in-page2 *latest-remote-tx))
         (validate-task-blocks)
         (validate-2-graphs)))
 
@@ -186,13 +187,12 @@
                   (rtc/with-wait-tx-updated
                     (property-basic-test/add-new-properties title-prefix))]
               (reset! *latest-remote-tx remote-tx))))]
-    (testing "page1: rtc-stop
-page2: create some user properties with different type
-page1: rtc-start"
+    (testing "add different types user properties on page2 while keeping rtc connected on page1"
       (let [*latest-remote-tx (atom nil)]
-        (with-stop-restart-rtc @*page1 #(insert-new-property-blocks-in-page2 *latest-remote-tx "rtc-property-test-1"))
-        (w/with-page @*page1
-          (rtc/wait-tx-update-to @*latest-remote-tx))
+        (rtc/with-stop-restart-rtc
+          [@*page1]
+          [@*page1 (rtc/wait-tx-update-to @*latest-remote-tx)]
+          (insert-new-property-blocks-in-page2 *latest-remote-tx "rtc-property-test-1"))
         (validate-2-graphs)))
 
     (new-logseq-page)
@@ -228,13 +228,33 @@ page1: rtc-start"
       ;; testing while rtc off then on
       (let [*latest-remote-tx (atom nil)]
         (new-logseq-page)
-        (with-stop-restart-rtc @*page1 #(test-fn-in-page2 *latest-remote-tx))
-        (w/with-page @*page1
-          (rtc/wait-tx-update-to @*latest-remote-tx))
+        (rtc/with-stop-restart-rtc
+          [@*page1]
+          [@*page1 (rtc/wait-tx-update-to @*latest-remote-tx)]
+          (test-fn-in-page2 *latest-remote-tx))
         (validate-2-graphs)))))
 
-(comment
-  (let [title-prefix "xxxx"
-        property-type "Text"]
-    (w/with-page @*page1
-      (b/new-block (str title-prefix "-" property-type)))))
+(deftest rtc-outliner-conflict-update-test
+  (let [title-prefix "rtc-outliner-conflict-update-test"]
+    (testing "add some blocks, ensure them synced"
+      (let [*latest-remote-tx (atom nil)]
+        (w/with-page @*page1
+          (let [{:keys [_local-tx remote-tx]}
+                (rtc/with-wait-tx-updated
+                  (b/new-blocks (map #(str title-prefix "-" %) (range 10))))]
+            (reset! *latest-remote-tx remote-tx)))
+        (w/with-page @*page2
+          (rtc/wait-tx-update-to @*latest-remote-tx))
+        (validate-2-graphs)))
+    (testing "disconnect on page1 and page2, do some conflict updates, reconnect and check"
+      (rtc/with-stop-restart-rtc
+        [@*page1 @*page2]
+        [@*page1 (rtc/with-wait-tx-updated (b/new-block "xxxx"))
+         @*page2 (rtc/with-wait-tx-updated (b/new-block "yyyy"))]
+        (w/with-page @*page1
+          (w/click (format ".ls-block :text('%s')" (str title-prefix "-" 1)))
+          (b/indent))
+        (w/with-page @*page2
+          (w/click (format ".ls-block :text('%s')" (str title-prefix "-" 0)))
+          (b/delete-blocks)))
+      (validate-2-graphs))))

@@ -110,8 +110,6 @@ jobs:
 
       - name: Run e2e tests
         run: timeout 30m bb dev
-        env:
-          DEBUG: "pw:api"
         working-directory: clj-e2e
 
       - name: Collect screenshots
@@ -164,8 +162,6 @@ jobs:
       - name: Run e2e tests
         run: timeout 30m bb run-rtc-extra-test
         working-directory: clj-e2e
-        env:
-          DEBUG: "pw:api"
 
       - name: Collect screenshots
         if: ${{ failure() }}
