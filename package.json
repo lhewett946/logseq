@@ -109,7 +109,7 @@
         "@emoji-mart/react": "^1.1.1",
         "@excalidraw/excalidraw": "0.16.4",
         "@glidejs/glide": "^3.6.0",
-        "@highlightjs/cdn-assets": "10.4.1",
+        "@highlightjs/cdn-assets": "11.11.1",
         "@isomorphic-git/lightning-fs": "^4.6.0",
         "@js-joda/core": "5.6.5",
         "@js-joda/locale_en-us": "3.1.1",
