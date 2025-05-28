@@ -113,7 +113,8 @@
                                :resolve {"react" {:target :global
                                                   :global "React"}
                                          "react-dom" {:target :global
-                                                      :global "ReactDOM"}}}
+                                                      :global "ReactDOM"}
+                                         "@excalidraw/excalidraw" {:target :global, :global "Excalidraw"}}}
                :modules       {:shared
                                {:entries []}
                                :main
