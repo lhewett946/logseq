@@ -3,7 +3,7 @@
  {logseq/common
   {:local/root "../common"}
   medley/medley {:mvn/version "1.4.0"}
-  metosin/malli {:mvn/version "0.16.1"}
+  metosin/malli {:mvn/version "0.18.0"}
   ;; Used by db scripts with outliner.cli
   borkdude/rewrite-edn {:mvn/version "0.4.9"}
   logseq/clj-fractional-indexing        {:git/url "https://github.com/logseq/clj-fractional-indexing"
