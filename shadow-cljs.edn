@@ -15,7 +15,8 @@
                         :resolve {"react" {:target :global
                                            :global "React"}
                                   "react-dom" {:target :global
-                                               :global "ReactDOM"}}} ;; handle `require(xxx.css)`
+                                               :global "ReactDOM"}
+                                  "@excalidraw/excalidraw" {:target :global, :global "Excalidraw"}}} ;; handle `require(xxx.css)`
         :modules       {:shared
                         {:entries []}
                         :main
