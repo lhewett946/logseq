@@ -14,11 +14,13 @@
             [frontend.common.missionary :as c.m]
             [frontend.common.thread-api :as thread-api :refer [def-thread-api]]
             [frontend.worker.db-listener :as db-listener]
+            [frontend.worker.db-metadata :as worker-db-metadata]
             [frontend.worker.db.fix :as db-fix]
             [frontend.worker.db.migrate :as db-migrate]
             [frontend.worker.db.validate :as worker-db-validate]
             [frontend.worker.export :as worker-export]
             [frontend.worker.file :as file]
+            [frontend.worker.file.reset :as file-reset]
             [frontend.worker.handler.page :as worker-page]
             [frontend.worker.handler.page.file-based.rename :as file-worker-page-rename]
             [frontend.worker.rtc.asset-db-listener]
@@ -189,44 +191,30 @@
                                                :db-schema-version (str version-in-db)}}))))
     missing-addresses))
 
-(def get-to-delete-unused-addresses-sql
-  "WITH to_delete(addr) AS (
-     SELECT value
-     FROM json_each(?)
-   ),
-  referenced(addr) AS (
-    SELECT json_each.value
-    FROM kvs
-    JOIN json_each(kvs.addresses)
-    WHERE kvs.addr NOT IN (SELECT addr FROM to_delete)
-      AND json_each.value IN (SELECT addr FROM to_delete)
-  )
-  SELECT addr FROM to_delete
-  WHERE addr NOT IN (SELECT addr FROM referenced)")
-
 (defn upsert-addr-content!
   "Upsert addr+data-seq. Update sqlite-cli/upsert-addr-content! when making changes"
   [db data delete-addrs*]
-  (let [delete-addrs (clojure.set/difference (set delete-addrs*) #{0 1})]
+  (let [_delete-addrs (clojure.set/difference (set delete-addrs*) #{0 1})]
     (assert (some? db) "sqlite db not exists")
     (.transaction db (fn [tx]
                        (doseq [item data]
                          (.exec tx #js {:sql "INSERT INTO kvs (addr, content, addresses) values ($addr, $content, $addresses) on conflict(addr) do update set content = $content, addresses = $addresses"
                                         :bind item}))))
-    (when (seq delete-addrs)
-      (let [result (.exec db #js {:sql get-to-delete-unused-addresses-sql
-                                  :bind (js/JSON.stringify (clj->js delete-addrs))
-                                  :rowMode "array"})
-            non-refed-addrs (map #(aget % 0) result)]
-        (when (seq non-refed-addrs)
-          (.transaction db (fn [tx]
-                             (doseq [addr non-refed-addrs]
-                               (.exec tx #js {:sql "Delete from kvs where addr = ?"
-                                              :bind #js [addr]}))))))
-      (let [missing-addrs (when worker-util/dev?
-                            (seq (find-missing-addresses nil db {:delete-addrs delete-addrs})))]
-        (when (seq missing-addrs)
-          (worker-util/post-message :notification [(str "Bug!! Missing addresses: " missing-addrs) :error false]))))))
+    ;; (when (seq delete-addrs)
+    ;;   (let [result (.exec db #js {:sql get-to-delete-unused-addresses-sql
+    ;;                               :bind (js/JSON.stringify (clj->js delete-addrs))
+    ;;                               :rowMode "array"})
+    ;;         non-refed-addrs (map #(aget % 0) result)]
+    ;;     (when (seq non-refed-addrs)
+    ;;       (.transaction db (fn [tx]
+    ;;                          (doseq [addr non-refed-addrs]
+    ;;                            (.exec tx #js {:sql "Delete from kvs where addr = ?"
+    ;;                                           :bind #js [addr]})))))
+    ;;     (let [missing-addrs (when worker-util/dev?
+    ;;                           (seq (find-missing-addresses nil db {:delete-addrs non-refed-addrs})))]
+    ;;       (when (seq missing-addrs)
+    ;;         (worker-util/post-message :notification [(str "Bug!! Missing addresses: " missing-addrs) :error false])))))
+    ))
 
 (defn restore-data-from-addr
   "Update sqlite-cli/restore-data-from-addr when making changes"
@@ -407,13 +395,14 @@
 
 (defn- <list-all-dbs
   []
-  (let [dir? #(= (.-kind %) "directory")]
+  (let [dir? #(= (.-kind %) "directory")
+        db-dir-prefix ".logseq-pool-"]
     (p/let [^js root (.getDirectory js/navigator.storage)
             values-iter (when (dir? root) (.values root))
             values (when values-iter (iter->vec values-iter))
             current-dir-dirs (filter dir? values)
             db-dirs (filter (fn [file]
-                              (string/starts-with? (.-name file) ".logseq-pool-"))
+                              (string/starts-with? (.-name file) db-dir-prefix))
                             current-dir-dirs)]
       (prn :debug
            :db-dirs (map #(.-name %) db-dirs)
@@ -424,9 +413,8 @@
                                            ;; TODO: DRY
                                            (string/replace "+3A+" ":")
                                            (string/replace "++" "/"))
-                            metadata-file-handle (.getFileHandle dir "metadata.edn" #js {:create true})
-                            metadata-file (.getFile metadata-file-handle)
-                            metadata (.text metadata-file)]
+                            repo (str sqlite-util/db-version-prefix graph-name)
+                            metadata (worker-db-metadata/<get repo)]
                       {:name graph-name
                        :metadata (edn/read-string metadata)})) db-dirs)))))
 
@@ -795,6 +783,12 @@
   [graph]
   (fix-broken-graph graph))
 
+(def-thread-api :thread-api/reset-file
+  [repo file-path content opts]
+  ;; (prn :debug :reset-file :file-path file-path :opts opts)
+  (when-let [conn (worker-state/get-datascript-conn repo)]
+    (file-reset/reset-file! repo conn file-path content opts)))
+
 (comment
   (def-thread-api :general/dangerousRemoveAllDbs
     []
@@ -848,11 +842,11 @@
   [repo start-opts]
   (js/Promise.
    (m/sp
-    (c.m/<? (init-sqlite-module!))
-    (when-not (:import-type start-opts)
-      (c.m/<? (start-db! repo start-opts))
-      (assert (some? (worker-state/get-datascript-conn repo))))
-    (m/? (rtc.core/new-task--rtc-start true)))))
+     (c.m/<? (init-sqlite-module!))
+     (when-not (:import-type start-opts)
+       (c.m/<? (start-db! repo start-opts))
+       (assert (some? (worker-state/get-datascript-conn repo))))
+     (m/? (rtc.core/new-task--rtc-start true)))))
 
 (def broadcast-data-types
   (set (map
