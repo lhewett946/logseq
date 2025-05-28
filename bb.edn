@@ -1,7 +1,7 @@
 {:paths ["scripts/src" "src/main" "src/resources"]
  :deps
  {metosin/malli
-  {:mvn/version "0.18.0"}
+  {:mvn/version "0.16.1"}
   borkdude/rewrite-edn {:mvn/version "0.4.9"}
   logseq/bb-tasks
   #_{:local/root "../bb-tasks"}
