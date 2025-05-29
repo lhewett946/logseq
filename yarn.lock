@@ -2115,10 +2115,12 @@ character-entities@^2.0.0:
   resolved "https://registry.yarnpkg.com/character-entities/-/character-entities-2.0.2.tgz#2d09c2e72cd9523076ccb21157dff66ad43fcc22"
   integrity sha512-shx7oQ0Awen/BRIdkjkvz54PnEEI/EjwXDSIZp86/KKdbafHh1Df/RYGBhn4hbe2+uKC9FnT5UCEdyPz3ai9hQ==
 
-check-password-strength@2.0.7:
-  version "2.0.7"
-  resolved "https://registry.yarnpkg.com/check-password-strength/-/check-password-strength-2.0.7.tgz#d8fd6c1a274267c7ddd9cd15c71a3cfb6ad35baa"
-  integrity sha512-VyklBkB6dOKnCIh63zdVr7QKVMN9/npwUqNAXxWrz8HabVZH/n/d+lyNm1O/vbXFJlT/Hytb5ouYKYGkoeZirQ==
+check-password-strength@3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/check-password-strength/-/check-password-strength-3.0.0.tgz#e437950a6a8b0c3bf33f1b389b5e82dc214b10ef"
+  integrity sha512-XIBvWpb7/RI2DO05tMixE4WbFFvEC7ls/jr1VSrWgXvlCmdiH2fsdkixG0cNGs1uIXwoSqJ75T3s9H/TlJV6Cw==
+  dependencies:
+    escape-string-regexp "^5.0.0"
 
 chokidar@3.5.1:
   version "3.5.1"
