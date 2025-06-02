@@ -126,7 +126,7 @@
         "bignumber.js": "^9.0.2",
         "capacitor-voice-recorder": "^5.0.0",
         "check-password-strength": "3.0.0",
-        "chokidar": "3.5.1",
+        "chokidar": "4.0.3",
         "chrono-node": "2.8.0",
         "codemirror": "5.65.18",
         "comlink": "^4.4.1",
