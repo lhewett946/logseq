@@ -2094,11 +2094,17 @@ canvas-roundrect-polyfill@0.0.1:
   resolved "https://registry.yarnpkg.com/canvas-roundrect-polyfill/-/canvas-roundrect-polyfill-0.0.1.tgz#70bf107ebe2037f26d839d7f809a26f4a95f5696"
   integrity sha512-yWq+R3U3jE+coOeEb3a3GgE2j/0MMiDKM/QpLb6h9ihf5fGY9UXtvK9o4vNqjWXoZz7/3EaSVU3IX53TvFFUOw==
 
-capacitor-voice-recorder@^5.0.0:
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/capacitor-voice-recorder/-/capacitor-voice-recorder-5.0.0.tgz#ec8e421283de19063461838fd340d91f352c8875"
-  integrity sha512-rCZgbmdmj9eXlotziRnIXWoo+7/aGKM1dSeSrgaEmayu9aTs8xkwhpx9eeVe24VDC6sfMHTnwMl5311Ryr/yFA==
+capacitor-blob-writer@^1.1.19:
+  version "1.1.19"
+  resolved "https://registry.yarnpkg.com/capacitor-blob-writer/-/capacitor-blob-writer-1.1.19.tgz#e2847e22014906bc6f1016ce4d6da6983e70ea01"
+  integrity sha512-2uZjL/y6F2yblA6lc5SP0JE+rQhxZcinmsLQKwGuSIDQySAdrcDkCAoQ07nqQV9qMtaeWsVTD6n08wo4R2sSjA==
+
+capacitor-voice-recorder@^7.0.5:
+  version "7.0.5"
+  resolved "https://registry.yarnpkg.com/capacitor-voice-recorder/-/capacitor-voice-recorder-7.0.5.tgz#3abb6acdc9817d74b58244799a3e0f954faebd66"
+  integrity sha512-5ADnmouV/mKusXyV6HLqhsUCwWDIeezFilulYkCt/ExL7op3vMz4/gtq5gw/jQjx82Ry5Nf+C3hN1lUhJdRtlw==
   dependencies:
+    capacitor-blob-writer "^1.1.19"
     get-blob-duration "^1.2.0"
 
 chalk@^2.4.1:
