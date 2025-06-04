@@ -138,7 +138,7 @@
         "emoji-mart": "^5.5.2",
         "fs": "0.0.1-security",
         "fs-extra": "9.1.0",
-        "fuse.js": "6.4.6",
+        "fuse.js": "7.1.0",
         "grapheme-splitter": "1.0.4",
         "graphology": "0.20.0",
         "html2canvas": "^1.4.1",
