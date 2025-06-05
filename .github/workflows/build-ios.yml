@@ -30,7 +30,7 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
 
       - name: Setup clojure
-        uses: DeLaGuardo/setup-clojure@13.2
+        uses: DeLaGuardo/setup-clojure@13.4
         with:
           cli: ${{ env.CLOJURE_VERSION }}
 
