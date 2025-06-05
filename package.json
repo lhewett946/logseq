@@ -127,7 +127,7 @@
         "capacitor-voice-recorder": "^7.0.5",
         "check-password-strength": "3.0.0",
         "chokidar": "4.0.3",
-        "chrono-node": "2.8.0",
+        "chrono-node": "2.8.2",
         "codemirror": "5.65.18",
         "comlink": "^4.4.1",
         "d3-force": "3.0.0",
