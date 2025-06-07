@@ -176,13 +176,13 @@
                              (if-not id
                                ;; add highlight
                                (let [highlight (merge highlight
-                                                      {:id         (pdf-utils/gen-uuid)
-                                                       :properties properties})]
+                                                 {:id (pdf-utils/gen-uuid)
+                                                  :properties properties})]
                                  (p/let [highlight' (add-hl! highlight)]
                                    (pdf-utils/clear-all-selection owner-win)
                                    (pdf-assets/copy-hl-ref! highlight' viewer)))
 
-;; update highlight
+                               ;; update highlight
                                (upd-hl! (assoc highlight :properties properties)))
 
                              (reset! *highlight-last-color (keyword action)))))
@@ -569,17 +569,15 @@
                       (set-highlights! highlights')
 
                       (if-let [vw-pos (and (pdf-assets/area-highlight? hl)
-                                           (pdf-utils/scaled-to-vw-pos viewer (:position hl)))]
-                        ;; exceptions
-                        (->
-                         (p/let [result (pdf-assets/persist-hl-area-image$ viewer (:pdf/current @state/state)
-                                                                           hl nil (:bounding vw-pos))]
-                           (if (de/entity? result)
-                             (let [hl' (assoc-in hl [:content :image] (:db/id result))]
-                               (set-highlights! (map (fn [hl] (if (= (:id hl) (:id hl')) hl' hl)) highlights'))
-                               hl')
-                             (throw (js/Error. (str "[pdf] unexpected persist asset image return:" result)))))
-                         (p/catch (fn [e] (js/console.error e))))
+                                        (pdf-utils/scaled-to-vw-pos viewer (:position hl)))]
+                        (-> (p/let [result (pdf-assets/persist-hl-area-image$ viewer (:pdf/current @state/state)
+                                             hl nil (:bounding vw-pos))]
+                              (if (de/entity? result)
+                                (let [hl' (assoc-in hl [:content :image] (:db/id result))]
+                                  (set-highlights! (map (fn [hl] (if (= (:id hl) (:id hl')) hl' hl)) highlights'))
+                                  hl')
+                                hl))
+                          (p/catch (fn [e] (js/console.error e))))
                         hl))))
         upd-hl! (fn [hl]
                   (let [highlights (pdf-utils/fix-nested-js highlights)]
