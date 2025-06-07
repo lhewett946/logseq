@@ -1,10 +1,11 @@
+import {deleteAsync} from 'del'
+
 const fs = require('fs')
 const utils = require('util')
 const cp = require('child_process')
 const exec = utils.promisify(cp.exec)
 const path = require('path')
 const gulp = require('gulp')
-const del = require('del')
 const ip = require('ip')
 const replace = require('gulp-replace')
 
@@ -37,8 +38,8 @@ const css = {
 }
 
 const common = {
-  clean () {
-    return del(
+  async clean () {
+    await deleteAsync(
       ['./static/**/*', '!./static/yarn.lock', '!./static/node_modules'])
   },
 
@@ -170,21 +171,17 @@ const common = {
     cb()
   },
 
-  switchReactDevelopmentMode(cb) {
-    try {
-      const reactFrom = path.join(outputPath, 'js', 'react.development.js');
-      const reactTo = path.join(outputPath, 'js', 'react.production.min.js');
-      fs.renameSync(reactFrom, reactTo);
+  switchReactDevelopmentMode (cb) {
+    const reactFrom = path.join(outputPath, 'js', 'react.development.js')
+    const reactTo = path.join(outputPath, 'js', 'react.production.min.js')
+    cp.execFileSync('mv', [reactFrom, reactTo], { stdio: 'inherit' })
 
-      const reactDomFrom = path.join(outputPath, 'js', 'react-dom.development.js');
-      const reactDomTo = path.join(outputPath, 'js', 'react-dom.production.min.js');
-      fs.renameSync(reactDomFrom, reactDomTo);
+    const reactDomFrom = path.join(outputPath, 'js', 'react-dom.development.js')
+    const reactDomTo = path.join(outputPath, 'js',
+      'react-dom.production.min.js')
+    cp.execFileSync('mv', [reactDomFrom, reactDomTo], { stdio: 'inherit' })
 
-      cb();
-    } catch (err) {
-      console.error("Error during switchReactDevelopmentMode:", err);
-      cb(err);
-    }
+    cb()
   },
 }
 
