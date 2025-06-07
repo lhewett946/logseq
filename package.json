@@ -131,7 +131,7 @@
         "codemirror": "5.65.18",
         "comlink": "^4.4.1",
         "d3-force": "3.0.0",
-        "diff": "5.0.0",
+        "diff": "8.0.2",
         "dompurify": "3.2.6",
         "electron": "36.2.0",
         "electron-dl": "^4.0.0",
