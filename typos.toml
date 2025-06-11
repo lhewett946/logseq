@@ -25,4 +25,4 @@ tne = "tne"
 Damon = "Damon"
 typ = "typ"
 [files]
-extend-exclude = ["resources/*", "src/resources/*", "scripts/resources/*", "e2e-tests/plugin/lsplugin.user.js"]
+extend-exclude = ["resources/*", "src/resources/*", "scripts/resources/*", "e2e-tests/plugin/lsplugin.user.js", "src/test/fixtures/*"]
