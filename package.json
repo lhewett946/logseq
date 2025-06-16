@@ -32,7 +32,7 @@
         "postcss-cli": "11.0.1",
         "postcss-functions": "^4.0.2",
         "postcss-import": "16.1.0",
-        "postcss-import-ext-glob": "2.0.1",
+        "postcss-import-ext-glob": "2.1.1",
         "postcss-nested": "7.0.2",
         "purgecss": "4.0.2",
         "semver": "7.7.2",
