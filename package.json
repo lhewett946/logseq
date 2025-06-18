@@ -154,7 +154,7 @@
         "pdfjs-dist": "^5.2.133",
         "photoswipe": "^5.3.7",
         "pixi-graph-fork": "0.2.0",
-        "pixi.js": "6.2.0",
+        "pixi.js": "8.10.1",
         "posthog-js": "1.249.0",
         "prop-types": "^15.7.2",
         "react": "18.3.1",
