@@ -282,7 +282,7 @@
                                (->block-properties (merge props (db-property-build/build-properties-with-ref-values pvalue-tx-m))
                                                    uuid-maps all-idents options))
                              (when class-parent
-                               {:logseq.property/parent
+                               {:logseq.property.class/extends
                                 (or (class-db-ids class-parent)
                                     (if (db-malli-schema/class? class-parent)
                                       class-parent
@@ -407,7 +407,7 @@
                                         (if graph-namespace
                                           (db-ident/create-db-ident-from-name (str (name graph-namespace) ".class")
                                                                               (name %))
-                                          (db-class/create-user-class-ident-from-name (name %)))))
+                                          (db-class/create-user-class-ident-from-name nil (name %)))))
                           (into {}))
         _ (assert (= (count (set (vals class-idents))) (count classes)) "All class db-idents must be unique")
         all-idents (merge property-idents class-idents)]

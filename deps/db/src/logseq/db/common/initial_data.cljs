@@ -1,6 +1,7 @@
 (ns logseq.db.common.initial-data
   "Provides db helper fns for graph initialization and lazy loading entities"
-  (:require [datascript.core :as d]
+  (:require [clojure.string :as string]
+            [datascript.core :as d]
             [datascript.impl.entity :as de]
             [logseq.common.config :as common-config]
             [logseq.common.util :as common-util]
@@ -173,11 +174,11 @@
                                    (= k :block/parent)
                                    (:db/id v)
                                    (= k :block/tags)
-                                   (set (map :db/id v))
+                                   (map #(select-keys % [:db/id]) v)
                                    (= k :logseq.property/created-by-ref)
                                    (:db/id v)
                                    (= k :block/refs)
-                                   (map #(select-keys % [:db/id :block/uuid :block/title]) v)
+                                   (map #(select-keys % [:db/id :block/uuid :block/title :logseq.property/status :block/tags]) v)
                                    (de/entity? v)
                                    (entity->map v opts)
                                    (and (coll? v) (every? de/entity? v))
@@ -329,9 +330,19 @@
    rseq
    (keep (fn [datom]
            (let [e (d/entity db (:e datom))]
-             (when (and (common-entity-util/page? e) (not (entity-util/hidden? e)))
+             (when (and (common-entity-util/page? e)
+                        (not (entity-util/hidden? e))
+                        (not (string/blank? (:block/title e))))
                e))))
    (take 30)))
+
+(defn- get-all-user-datoms
+  [db]
+  (when (d/entity db :logseq.property.user/email)
+    (mapcat
+     (fn [d]
+       (d/datoms db :eavt (:e d)))
+     (d/datoms db :avet :logseq.property.user/email))))
 
 (defn get-initial-data
   "Returns current database schema and initial data.
@@ -357,6 +368,7 @@
                             (get-structured-datoms db))
         recent-updated-pages (let [pages (get-recent-updated-pages db)]
                                (mapcat (fn [p] (d/datoms db :eavt (:db/id p))) pages))
+        user-datoms (get-all-user-datoms db)
         pages-datoms (if db-graph?
                        (let [contents-id (get-first-page-by-title db "Contents")
                              views-id (get-first-page-by-title db common-config/views-page-name)]
@@ -368,6 +380,7 @@
         data (distinct
               (concat idents
                       structured-datoms
+                      user-datoms
                       favorites
                       recent-updated-pages
                       views

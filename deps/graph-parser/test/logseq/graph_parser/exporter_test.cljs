@@ -212,6 +212,7 @@
       (is (= 4 (count (d/q '[:find ?b :where [?b :block/tags :logseq.class/Task]] @conn))))
       (is (= 4 (count (d/q '[:find ?b :where [?b :block/tags :logseq.class/Query]] @conn))))
       (is (= 2 (count (d/q '[:find ?b :where [?b :block/tags :logseq.class/Card]] @conn))))
+      (is (= 3 (count (d/q '[:find ?b :where [?b :block/tags :logseq.class/Quote-block]] @conn))))
 
       ;; Properties and tags aren't included in this count as they aren't a Page
       (is (= 10
@@ -364,7 +365,7 @@
              (:block/alias (db-test/readable-properties (db-test/find-page-by-title @conn "chat-gpt"))))
           "alias set correctly")
       (is (= ["y"]
-             (->> (d/q '[:find [?b ...] :where [?b :block/title "y"] [?b :logseq.property/parent]]
+             (->> (d/q '[:find [?b ...] :where [?b :block/title "y"] [?b :block/parent]]
                        @conn)
                   first
                   (d/entity @conn)
@@ -415,7 +416,17 @@
           "Asset has correct properties")
       (is (= (d/entity @conn :logseq.class/Asset)
              (:block/page (db-test/find-block-by-content @conn "greg-popovich-thumbs-up_1704749687791_0")))
-          "Imported into Asset page"))
+          "Imported into Asset page")
+      ;; Quotes
+      (is (= {:block/tags [:logseq.class/Quote-block]
+              :logseq.property.node/display-type :quote}
+             (db-test/readable-properties (db-test/find-block-by-content @conn #"Saito"))))
+      (is (= "markdown quote\n[[wut]]\nline 3"
+             (:block/title (db-test/find-block-by-content @conn #"markdown quote")))
+          "Markdown quote imports as full multi-line quote")
+      (is (= "*Italic* ~~Strikethrough~~ ^^Highlight^^ #[[foo]]\n**Learn Datalog Today** is an interactive tutorial designed to teach you the [Datomic](http://datomic.com/) dialect of [Datalog](http://en.wikipedia.org/wiki/Datalog). Datalog is a declarative **database query language** with roots in logic programming. Datalog has similar expressive power as [SQL](http://en.wikipedia.org/wiki/Sql)."
+             (:block/title (db-test/find-block-by-content @conn #"Learn Datalog")))
+          "Imports full quote with various ast types"))
 
     (testing "tags convert to classes"
       (is (= :user.class/Quotes___life
@@ -440,14 +451,15 @@
 
     (testing "namespaces"
       (let [expand-children (fn expand-children [ent parent]
-                              (if-let [children (:logseq.property/_parent ent)]
+                              (if-let [children (:block/_parent ent)]
                                 (cons {:parent (:block/title parent) :child (:block/title ent)}
                                       (mapcat #(expand-children % ent) children))
                                 [{:parent (:block/title parent) :child (:block/title ent)}]))]
+        ;; check pages only
         (is (= [{:parent "n1" :child "x"}
                 {:parent "x" :child "z"}
                 {:parent "x" :child "y"}]
-               (rest (expand-children (db-test/find-page-by-title @conn "n1") nil)))
+               (take 3 (rest (expand-children (db-test/find-page-by-title @conn "n1") nil))))
             "First namespace tests duplicate parent page name")
         (is (= [{:parent "n2" :child "x"}
                 {:parent "x" :child "z"}
@@ -640,7 +652,8 @@
   (p/let [file-graph-dir "test/resources/exporter-test-graph"
           files (mapv #(node-path/join file-graph-dir %)
                       ["journals/2024_02_23.md" "pages/url.md" "pages/Whiteboard___Tool.md"
-                       "pages/Whiteboard___Arrow_head_toggle.md"])
+                       "pages/Whiteboard___Arrow_head_toggle.md"
+                       "pages/Library.md"])
           conn (db-test/create-conn)
           _ (import-files-to-db files conn {:property-classes ["type"]})
           _ (@#'gp-exporter/export-class-properties conn conn)]
@@ -725,9 +738,9 @@
                 set))
         "All classes are correctly defined by :type")
 
-    (is (= "CreativeWork" (get-in (d/entity @conn :user.class/Movie) [:logseq.property/parent :block/title]))
+    (is (= "CreativeWork" (get-in (d/entity @conn :user.class/Movie) [:logseq.property.class/extends :block/title]))
         "Existing page correctly set as class parent")
-    (is (= "Thing" (get-in (d/entity @conn :user.class/CreativeWork) [:logseq.property/parent :block/title]))
+    (is (= "Thing" (get-in (d/entity @conn :user.class/CreativeWork) [:logseq.property.class/extends :block/title]))
         "New page correctly set as class parent")))
 
 (deftest-async export-files-with-property-pages-disabled
