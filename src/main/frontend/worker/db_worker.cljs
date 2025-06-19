@@ -43,7 +43,6 @@
             [logseq.db.common.view :as db-view]
             [logseq.db.frontend.schema :as db-schema]
             [logseq.db.sqlite.create-graph :as sqlite-create-graph]
-            [logseq.db.sqlite.debug :as sqlite-debug]
             [logseq.db.sqlite.export :as sqlite-export]
             [logseq.db.sqlite.gc :as sqlite-gc]
             [logseq.db.sqlite.util :as sqlite-util]
@@ -257,7 +256,7 @@
                                      :kv/value (common-util/time-ms)}]))))
 
 (defn- create-or-open-db!
-  [repo {:keys [config import-type datoms] :as opts}]
+  [repo {:keys [config datoms] :as opts}]
   (when-not (worker-state/get-sqlite-conn repo)
     (p/let [[db search-db client-ops-db :as dbs] (get-dbs repo)
             storage (new-sqlite-storage db)
@@ -296,22 +295,6 @@
             (d/transact! conn initial-data {:initial-db? true})))
 
         (gc-sqlite-dbs! db client-ops-db conn {})
-
-        ;; TODO: remove this once we can ensure there's no bug for missing addresses
-        ;; because it's slow for large graphs
-        (when-not import-type
-          (when-let [missing-addresses (seq (sqlite-debug/find-missing-addresses db))]
-            (let [version-in-db (when conn (db-schema/parse-schema-version (or (:kv/value (d/entity @conn :logseq.kv/schema-version)) 0)))
-                  compare-result (when version-in-db (db-schema/compare-schema-version version-in-db "64.8"))]
-              (when (and compare-result (not (neg? compare-result))) ; >= 64.8
-                (worker-util/post-message :capture-error
-                                          {:error "db-missing-addresses-v3"
-                                           :payload {:missing-addresses (str missing-addresses)
-                                                     :db-schema-version (str version-in-db)
-                                                     :graph-git-sha (when conn
-                                                                      (:kv/value (:logseq.kv/graph-git-sha @conn)))}})))
-            (worker-util/post-message :notification ["It seems that the DB has been broken. Please run the command `Fix current broken graph`." :error false])
-            (throw (ex-info "DB missing addresses" {:missing-addresses missing-addresses}))))
 
         (db-migrate/migrate conn search-db)
 
@@ -472,27 +455,22 @@
   (when-let [conn (worker-state/get-datascript-conn repo)]
     (:db/id (first (:block/_alias (d/entity @conn id))))))
 
+(defn- search-blocks
+  [repo q option]
+  (p/let [search-db (get-search-db repo)
+          conn (worker-state/get-datascript-conn repo)]
+    (search/search-blocks repo conn search-db q option)))
+
 (def-thread-api :thread-api/block-refs-check
   [repo id {:keys [unlinked?]}]
   (when-let [conn (worker-state/get-datascript-conn repo)]
     (let [db @conn
-          block (d/entity db id)
-          db-based? (entity-plus/db-based-graph? db)]
+          block (d/entity db id)]
       (if unlinked?
-        (let [title (string/lower-case (:block/title block))]
-          (when-not (string/blank? title)
-            (let [datoms (d/datoms db :avet :block/title)]
-              (if db-based?
-                (some (fn [d]
-                        (and (not= id (:e d)) (string/includes? (string/lower-case (:v d)) title)))
-                      datoms)
-                (some (fn [d]
-                        (and (not= id (:e d))
-                             (string/includes? (string/lower-case (:v d)) title)
-                             (let [refs (map :db/id (:block/refs (d/entity db (:e d))))]
-                               (contains? (set refs) (:e d)))))
-                      datoms)))))
-        (> (ldb/get-block-refs-count db (:db/id block)) 0)))))
+        (p/let [title (string/lower-case (:block/title block))
+                result (search-blocks repo title {:limit 3})]
+          (boolean (some (fn [b] (not= id (:db/id b))) result)))
+        (some? (first (:block/_refs block)))))))
 
 (def-thread-api :thread-api/get-block-parents
   [repo id depth]
@@ -585,9 +563,7 @@
 
 (def-thread-api :thread-api/search-blocks
   [repo q option]
-  (p/let [search-db (get-search-db repo)
-          conn (worker-state/get-datascript-conn repo)]
-    (search/search-blocks repo conn search-db q option)))
+  (search-blocks repo q option))
 
 (def-thread-api :thread-api/search-upsert-blocks
   [repo blocks]
@@ -659,9 +635,8 @@
 
 (def-thread-api :thread-api/export-get-debug-datoms
   [repo]
-  (when-let [db (worker-state/get-sqlite-conn repo)]
-    (let [conn (worker-state/get-datascript-conn repo)]
-      (worker-export/get-debug-datoms conn db))))
+  (when-let [conn (worker-state/get-datascript-conn repo)]
+    (worker-export/get-debug-datoms conn)))
 
 (def-thread-api :thread-api/export-get-all-pages
   [repo]
