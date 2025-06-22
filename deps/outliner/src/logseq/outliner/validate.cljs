@@ -37,13 +37,15 @@
                             :payload {:message "Page name can't be blank."
                                       :type :warning}})))))
 
+(def ^:api uneditable-page? ldb/built-in?)
+
 (defn ^:api validate-built-in-pages
   "Validates built-in pages shouldn't be modified"
-  [entity]
-  (when (ldb/built-in? entity)
+  [entity & {:keys [message]}]
+  (when (uneditable-page? entity)
     (throw (ex-info "Rename built-in pages"
                     {:type :notification
-                     :payload {:message "Built-in pages can't be edited"
+                     :payload {:message (or message "Built-in pages can't be edited")
                                :type :warning}}))))
 
 (defn- validate-unique-by-extends-and-name [db entity new-title]

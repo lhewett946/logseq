@@ -207,7 +207,8 @@
                 (query/custom-query (component-block/wrap-query-components
                                      {:attr {:class "mt-10"}
                                       :editor-box editor/box
-                                      :page page-cp})
+                                      :page page-cp
+                                      :built-in-query? true})
                                     query'))
                (str repo "-custom-query-" (:query query')))))]))))
 
@@ -640,7 +641,7 @@
             (when show-tabs?
               (tabs page {:current-page? option :sidebar? sidebar? :*objects-ready? *objects-ready?}))
 
-            (when (and (not show-tabs?) (not tag-dialog?))
+            (when (not tag-dialog?)
               [:div.ls-page-blocks
                {:style {:margin-left (if whiteboard? 0 -20)}
                 :class (when-not sidebar?

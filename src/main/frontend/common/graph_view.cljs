@@ -47,9 +47,9 @@
      pages
      (remove ldb/hidden?)
      (remove nil?)
-     (mapv (fn [p]
-             (let [page-title (:block/title p)
-                   current-page? (= page-title current-page)
+     (keep (fn [p]
+             (if-let [page-title (:block/title p)]
+               (let [current-page? (= page-title current-page)
                    color-type (if db-based?
                                 (:block/title (d/entity db (last (map :db/id (:block/tags p)))))
                                 (get (:block/properties p) color-property))
@@ -68,9 +68,11 @@
                  :color color
                  :block/created-at (:block/created-at p)}
                  (contains? page-parents (:db/id p))
-                 (assoc :parent true))))))))
+                 (assoc :parent true)))
+               (js/console.error (str "Page doesn't have :block/title " p)))))
+     vec)))
 
-                  ;; slow
+;; slow
 (defn- uuid-or-asset?
   [label]
   (or (common-util/uuid-string? label)
