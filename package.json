@@ -142,7 +142,7 @@
         "grapheme-splitter": "1.0.4",
         "graphology": "0.20.0",
         "html2canvas": "^1.4.1",
-        "ignore": "5.1.8",
+        "ignore": "7.0.5",
         "inter-ui": "^4.1.0",
         "interactjs": "^1.10.17",
         "jszip": "3.10.1",
