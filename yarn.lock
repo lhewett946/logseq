@@ -329,10 +329,10 @@
   resolved "https://registry.yarnpkg.com/@floating-ui/utils/-/utils-0.2.9.tgz#50dea3616bc8191fb8e112283b49eaff03e78429"
   integrity sha512-MDWhGtE+eHw5JW7lq4qhc5yRLS11ERl1c7Z6Xd0a58DozHES6EnNNwUWbMiG4J9Cgj053Bhk8zvlhFYKVhULwg==
 
-"@glidejs/glide@^3.6.0":
-  version "3.6.0"
-  resolved "https://registry.yarnpkg.com/@glidejs/glide/-/glide-3.6.0.tgz#d13fd57de8473a2d86022ac601b5cbc98c9dcfe5"
-  integrity sha512-47Aa+JmYjY4xTFpTtYCwrqirmI1arnp1UZETwtWpbTPisXUAuxrdJxKJLH8KHFWMsSrLi9+AcfyfzDIuO75rEA==
+"@glidejs/glide@^3.7.1":
+  version "3.7.1"
+  resolved "https://registry.yarnpkg.com/@glidejs/glide/-/glide-3.7.1.tgz#cd3fb256006d9c7aec2f95873d268410df2ab0ce"
+  integrity sha512-8he0pZpLSqTesSFYiuWdhBmtdlYSPWxfPUCKtkkiX6ZmT8UdMdmoFPtJaOwLBXv4p2JiGxqbuPdiRGGo2e/htQ==
 
 "@highlightjs/cdn-assets@11.11.1":
   version "11.11.1"
