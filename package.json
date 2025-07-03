@@ -133,7 +133,7 @@
         "d3-force": "3.0.0",
         "diff": "8.0.2",
         "dompurify": "3.2.6",
-        "electron": "36.2.0",
+        "electron": "37.2.0",
         "electron-dl": "^4.0.0",
         "emoji-mart": "^5.5.2",
         "fs": "0.0.1-security",
