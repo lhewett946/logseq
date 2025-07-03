@@ -2877,23 +2877,21 @@
       (case position
         :block-below
         [:div.positioned-properties.block-below.flex.flex-row.gap-2.item-center.flex-wrap.text-sm.overflow-x-hidden
-         (for [pid properties]
-           (let [property (db/entity pid)]
-             [:div.flex.flex-row.items-center.gap-1
-              {:key (str pid)}
-              [:div.flex.flex-row.items-center
-               (property-component/property-key-cp block property opts)
-               [:div.select-none ":"]]
-              [:div.ls-block.property-value-container
-               {:style {:min-height 20}}
-               (pv/property-value block property opts)]]))]
+         (for [property properties]
+           [:div.flex.flex-row.items-center.gap-1
+            {:key (str (:db/id block) "-" (:db/id property))}
+            [:div.flex.flex-row.items-center
+             (property-component/property-key-cp block property opts)
+             [:div.select-none ":"]]
+            [:div.ls-block.property-value-container
+             {:style {:min-height 20}}
+             (pv/property-value block property opts)]])]
         [:div.positioned-properties.flex.flex-row.gap-1.select-none.h-6.self-start
          {:class (name position)}
-         (for [pid properties]
-           (when-let [property (db/entity pid)]
-             (rum/with-key
-               (pv/property-value block property (assoc opts :show-tooltip? true))
-               (str pid))))]))))
+         (for [property properties]
+           (rum/with-key
+             (pv/property-value block property (assoc opts :show-tooltip? true))
+             (str (:db/id block) "-" (:db/id property))))]))))
 
 (rum/defc status-history-cp
   [status-history]
@@ -4355,7 +4353,8 @@
 
 (rum/defc block-list
   [config blocks]
-  (let [[virtualized? _] (rum/use-state (and (not (:block-children? config)) (>= (count blocks) 50)))
+  (let [[virtualized? _] (rum/use-state (not (or (and (:journals? config) (< (count blocks) 50))
+                                                 (:block-children? config))))
         render-item (fn [idx]
                       (let [top? (zero? idx)
                             bottom? (= (dec (count blocks)) idx)
