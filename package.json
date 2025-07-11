@@ -133,7 +133,7 @@
         "@radix-ui/colors": "^3.0.0",
         "@sentry/react": "^9.20.0",
         "@sentry/tracing": "^6.18.2",
-        "@tabler/icons-react": "^2.47.0",
+        "@tabler/icons-react": "^3.34.0",
         "@tabler/icons-webfont": "^2.47.0",
         "@tippyjs/react": "4.2.6",
         "bignumber.js": "^9.0.2",
