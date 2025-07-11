@@ -262,7 +262,7 @@
   [block property]
   (let [opts {:exit-edit? false}
         block (db/sub-block (:db/id block))]
-    [:div.p-4.flex.flex-col.gap-4.w-64
+    [:div.p-4.hidden.sm:flex.flex-col.gap-4.w-64
      [:div.mb-4
       [:div.flex.flex-row.items-center.gap-1
        [:div.w-4
@@ -367,16 +367,16 @@
           (when d
             (let [journal (date/js-date->journal-title d)]
               (p/do!
-               (when-not (db/get-page journal)
+               (when-not (model/get-journal-page journal)
                  (page-handler/<create! journal {:redirect? false}))
                (when (fn? on-change)
-                 (let [value (if datetime? (tc/to-long d) (db/get-page journal))]
+                 (let [value (if datetime? (tc/to-long d) (model/get-journal-page journal))]
                    (on-change value)))
                (when-not datetime?
                  (shui/popup-hide! id)
                  (ui/hide-popups-until-preview-popup!))))))]
     [:div.flex.flex-row.gap-2
-     [:div.flex.flex-col
+     [:div.flex.flex-1.items-center
       (ui/nlp-calendar
        (cond->
         {:initial-focus true
@@ -388,7 +388,8 @@
          :on-day-click select-handler!}
          initial-month
          (assoc :default-month initial-month)))]
-     (shui/separator {:orientation "vertical"})
+     [:div.hidden.sm:initial
+      (shui/separator {:orientation "vertical"})]
      (repeat-setting block property)]))
 
 (rum/defc overdue
@@ -1264,7 +1265,10 @@
                       (set-value! (util/evalue e))
                       (reset! *value (util/evalue e)))
          :on-blur (fn [_e]
-                    (set-property-value! value))
+                    (p/do!
+                     (set-property-value! value)
+                     (when (not= value (db-property/property-value-content (db/entity (:db/id value-block))))
+                       (set-value! (db-property/property-value-content value-block)))))
          :on-key-down (fn [e]
                         (let [input (rum/deref *input-ref)
                               pos (cursor/pos input)

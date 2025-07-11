@@ -13,10 +13,14 @@ env:
 
 jobs:
   build-ios:
-    runs-on: macos-13
+    runs-on: macos-15
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: 16.1
 
       - name: Install Node.js, NPM and Yarn
         uses: actions/setup-node@v4
@@ -35,10 +39,7 @@ jobs:
           cli: ${{ env.CLOJURE_VERSION }}
 
       - name: Compile CLJS
-        run: yarn install && yarn release-app
-
-      - name: Sync static build files
-        run: rsync -avz --exclude node_modules --exclude '*.js.map' --exclude android ./static/ ./public/static/
+        run: yarn install && yarn release-mobile
 
       - name: Prepare iOS build
         run: npx cap sync ios
