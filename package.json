@@ -136,7 +136,7 @@
         "@tabler/icons-react": "^2.47.0",
         "@tabler/icons-webfont": "^2.47.0",
         "@tippyjs/react": "4.2.6",
-        "bignumber.js": "^9.0.2",
+        "bignumber.js": "^9.3.1",
         "capacitor-voice-recorder": "^7.0.5",
         "check-password-strength": "3.0.0",
         "chokidar": "4.0.3",
