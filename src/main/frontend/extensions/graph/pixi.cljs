@@ -68,7 +68,8 @@
                     (.strength charge-strength)))
         (.force "collision"
                 (-> (forceCollide)
-                    (.radius (+ 8 18))
+                    (.radius (fn [d]
+                             (+ (or (.-size d) 8) 18)))
                     (.iterations 2)))
         (.force "center" (forceCenter))
         ;; The decay factor is akin to atmospheric friction; after the application of any forces during a tick,
