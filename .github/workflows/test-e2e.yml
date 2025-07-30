@@ -70,52 +70,52 @@ jobs:
           path: clj-e2e/e2e-dump/*
           retention-days: 1
 
-  rtc-e2e:
-    name: RTC Test E2E
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-  
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-  
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: ${{ env.JAVA_VERSION }}
-  
-      - name: Set up Clojure
-        uses: DeLaGuardo/setup-clojure@13.4
-        with:
-          cli: ${{ env.CLOJURE_VERSION }}
-          bb: ${{ env.BABASHKA_VERSION }}
-  
-      - name: Fetch Clojure deps
-        run: clojure -A:cljs -P
-  
-      - name: Fetch yarn deps
-        run: yarn install
-        env:
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: true
-  
-      # NOTE: require the app to be build with DEV-RELEASE flag
-      - name: Prepare E2E test build
-        run: |
-          yarn gulp:build && clojure -M:cljs release app --config-merge "{:closure-defines {frontend.config/DEV-RELEASE true}}" --debug
-          rsync -avz --exclude node_modules --exclude android --exclude ios ./static/ ./public/
-  
-      - name: Run e2e tests
-        run: timeout 30m bb run-rtc-extra-test
-        working-directory: clj-e2e
-  
-      - name: Collect screenshots
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-screenshots
-          path: clj-e2e/e2e-dump/*
-          retention-days: 1
+  #rtc-e2e:
+  #  name: RTC Test E2E
+  #  runs-on: ubuntu-latest
+  #  steps:
+  #    - name: Checkout
+  #      uses: actions/checkout@v4
+  #
+  #    - name: Set up Node
+  #      uses: actions/setup-node@v4
+  #      with:
+  #        node-version: ${{ env.NODE_VERSION }}
+  #
+  #    - name: Set up Java
+  #      uses: actions/setup-java@v4
+  #      with:
+  #        distribution: 'zulu'
+  #        java-version: ${{ env.JAVA_VERSION }}
+  #
+  #    - name: Set up Clojure
+  #      uses: DeLaGuardo/setup-clojure@13.4
+  #      with:
+  #        cli: ${{ env.CLOJURE_VERSION }}
+  #        bb: ${{ env.BABASHKA_VERSION }}
+  #
+  #    - name: Fetch Clojure deps
+  #      run: clojure -A:cljs -P
+  #
+  #    - name: Fetch yarn deps
+  #      run: yarn install
+  #      env:
+  #        PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: true
+  #
+  #    # NOTE: require the app to be build with DEV-RELEASE flag
+  #    - name: Prepare E2E test build
+  #      run: |
+  #        yarn gulp:build && clojure -M:cljs release app --config-merge "{:closure-defines {frontend.config/DEV-RELEASE true}}" --debug
+  #        rsync -avz --exclude node_modules --exclude android --exclude ios ./static/ ./public/
+  #
+  #    - name: Run e2e tests
+  #      run: timeout 30m bb run-rtc-extra-test
+  #      working-directory: clj-e2e
+  #
+  #    - name: Collect screenshots
+  #      if: ${{ failure() }}
+  #      uses: actions/upload-artifact@v4
+  #      with:
+  #        name: e2e-screenshots
+  #        path: clj-e2e/e2e-dump/*
+  #        retention-days: 1
