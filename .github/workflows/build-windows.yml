@@ -40,6 +40,7 @@ jobs:
           yarn install --network-timeout 600000
           gulp build
           yarn cljs:release-electron
+          yarn webpack-app-build
           cd static 
           yarn install --network-timeout 600000
    

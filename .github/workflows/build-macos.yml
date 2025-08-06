@@ -41,6 +41,7 @@ jobs:
           sudo npm install gulp-cli -g
           gulp build
           yarn cljs:release-electron
+          yarn webpack-app-build
           cd static
           yarn install
           yarn electron:make
@@ -88,6 +89,7 @@ jobs:
   #        sudo npm install gulp-cli -g
   #        gulp build
   #        yarn cljs:release-electron
+  #        yarn webpack-app-build
   #        cd static
   #        yarn install --target_arch=arm64 --target_platform=darwin
   #          

@@ -41,6 +41,7 @@ jobs:
             yarn install
             gulp build
             yarn cljs:release-electron
+            yarn webpack-app-build
             cd static
             yarn install
             yarn electron:make
@@ -87,6 +88,7 @@ jobs:
             yarn install
             gulp build
             yarn cljs:release-electron
+            yarn webpack-app-build
             cd static
             yarn install --target_arch=arm64 --target_platform=linux
             rsapi_version=`node -e 'console.log(require("@logseq/rsapi/package.json").optionalDependencies["@logseq/rsapi-linux-arm64-gnu"])'`
