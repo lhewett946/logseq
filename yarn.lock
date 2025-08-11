@@ -1609,17 +1609,23 @@
     "@tabler/icons" "2.47.0"
     prop-types "^15.7.2"
 
-"@tabler/icons-webfont@^2.47.0":
-  version "2.47.0"
-  resolved "https://registry.yarnpkg.com/@tabler/icons-webfont/-/icons-webfont-2.47.0.tgz#4b4303170d1ed616140044848d6ef99cc993abf9"
-  integrity sha512-yfV9zDal0iYDmyGz4BS9IlhaaMydtLdyOrY2UAZToP65sVWj7AFIi6symNzsoBaX867xAZWVHdKcocah0BfSog==
+"@tabler/icons-webfont@^3.34.1":
+  version "3.34.1"
+  resolved "https://registry.yarnpkg.com/@tabler/icons-webfont/-/icons-webfont-3.34.1.tgz#3d9a969d65010103e14412e70d1897972a619084"
+  integrity sha512-sDivdBYt4lTY7pAv+MV1t9bzIWe5d0BLBal6dmk/lqnjsMSVBoi6ESLsSWVKGs7/ux5QHwz+/Ai9m5znZ9cw8g==
   dependencies:
-    "@tabler/icons" "2.47.0"
+    "@tabler/icons" "3.34.1"
+    sharp "^0.34.1"
 
 "@tabler/icons@2.47.0":
   version "2.47.0"
   resolved "https://registry.yarnpkg.com/@tabler/icons/-/icons-2.47.0.tgz#c41c680d1947e3ab2d60af3febc4132287c60596"
   integrity sha512-4w5evLh+7FUUiA1GucvGj2ReX2TvOjEr4ejXdwL/bsjoSkof6r1gQmzqI+VHrE2CpJpB3al7bCTulOkFa/RcyA==
+
+"@tabler/icons@3.34.1":
+  version "3.34.1"
+  resolved "https://registry.yarnpkg.com/@tabler/icons/-/icons-3.34.1.tgz#a04a8cf79a5ebdcc44796dfa3de51d04811d2f9f"
+  integrity sha512-9gTnUvd7Fd/DmQgr3MKY+oJLa1RfNsQo8c/ir3TJAWghOuZXodbtbVp0QBY2DxWuuvrSZFys0HEbv1CoiI5y6A==
 
 "@tailwindcss/aspect-ratio@0.4.2":
   version "0.4.2"
