@@ -145,7 +145,7 @@
         "@sentry/tracing": "^7.120.3",
         "@sqlite.org/sqlite-wasm": "^3.50.3-build1",
         "@tabler/icons-react": "^2.47.0",
-        "@tabler/icons-webfont": "^2.47.0",
+        "@tabler/icons-webfont": "^3.34.1",
         "@tippyjs/react": "4.2.6",
         "bignumber.js": "^9.3.1",
         "capacitor-voice-recorder": "^7.0.5",
