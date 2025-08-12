@@ -21,7 +21,7 @@ jobs:
     runs-on: ${{ matrix.operating-system }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         
       # Must set up Java before running some Clojure tools
       - name: Set up Java
