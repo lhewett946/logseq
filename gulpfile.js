@@ -90,7 +90,7 @@ const common = {
         'node_modules/dompurify/dist/purify.js',
       ]).pipe(gulp.dest(path.join(outputPath, 'js'))),
       () => gulp.src([
-        'node_modules/@tabler/icons-react/dist/umd/tabler-icons-react.min.js',
+        'node_modules/@tabler/icons-react/dist/esm/tabler-icons-react.mjs',
       ]).
         pipe(replace('"@tabler/icons-react"]={},a.react,',
           '"tablerIcons"]={},a.React,')).
