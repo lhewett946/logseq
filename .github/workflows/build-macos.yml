@@ -58,53 +58,52 @@ jobs:
           name: logseq-darwin-x64-builds
           path: builds
             
-  #build-macos-arm64:
-  #  name: MacOS arm64 Build
-  #  runs-on: macos-13
-  #  steps:
-  #    - name: Checkout
-  #      uses: actions/checkout@v5
-  #  
-  #    - name: Install Node.js, NPM and Yarn
-  #      uses: actions/setup-node@v4
-  #      with:
-  #        node-version: ${{ env.NODE_VERSION }}
-  #  
-  #    - name: Set up Java
-  #      uses: actions/setup-java@v5
-  #      with:
-  #        distribution: 'zulu'
-  #        java-version: ${{env.JAVA_VERSION}}
-  #  
-  #    - name: Set up Clojure
-  #      uses: DeLaGuardo/setup-clojure@13.4
-  #      with:
-  #        cli: ${{env.CLOJURE_VERSION}}
-  #  
-  #    - name: Fetch deps
-  #      env:
-  #        npm_config_arch: arm64
-  #      run: |
-  #        yarn install --target_arch=arm64 --target_platform=darwin
-  #        sudo npm install gulp-cli -g
-  #        gulp build
-  #        yarn cljs:release-electron
-  #        yarn webpack-app-build
-  #        cd static
-  #        yarn install --target_arch=arm64 --target_platform=darwin
-  #          
-  #    - name: Build/Release Electron App for arm64
-  #      run: yarn electron:make-macos-arm64
-  #        
-  #    - name: Save arm64 artifacts
-  #      run: |
-  #        mkdir -p builds
-  #        mv static/out/make/Logseq.dmg ./builds/Logseq-darwin-arm64.dmg
-  #        mv static/out/make/zip/darwin/arm64/*.zip ./builds/Logseq-darwin-arm64.zip
-  #          
-  #    - name: Upload Artifact
-  #      uses: actions/upload-artifact@v4
-  #      with:
-  #        name: logseq-darwin-arm64-builds
-  #        path: builds
+  build-macos-arm64:
+    name: MacOS arm64 Build
+    runs-on: macos-13
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+    
+      - name: Install Node.js, NPM and Yarn
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+    
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: ${{env.JAVA_VERSION}}
+    
+      - name: Set up Clojure
+        uses: DeLaGuardo/setup-clojure@13.2
+        with:
+          cli: ${{env.CLOJURE_VERSION}}
+    
+      - name: Fetch deps
+        env:
+          npm_config_arch: arm64
+        run: |
+          yarn install --target_arch=arm64 --target_platform=darwin
+          sudo npm install gulp-cli -g
+          gulp build
+          yarn cljs:release-electron
+          cd static
+          yarn install --target_arch=arm64 --target_platform=darwin
+            
+      - name: Build/Release Electron App for arm64
+        run: yarn electron:make-macos-arm64
+          
+      - name: Save arm64 artifacts
+        run: |
+          mkdir -p builds
+          mv static/out/make/Logseq.dmg ./builds/Logseq-darwin-arm64.dmg
+          mv static/out/make/zip/darwin/arm64/*.zip ./builds/Logseq-darwin-arm64.zip
+            
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: logseq-darwin-arm64-builds
+          path: builds
             
