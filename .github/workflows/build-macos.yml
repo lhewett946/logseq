@@ -92,9 +92,7 @@ jobs:
           yarn webpack-app-build
           cd static
           yarn install --target_arch=arm64 --target_platform=darwin
-            
-      - name: Build/Release Electron App for arm64
-        run: yarn electron:make-macos-arm64
+          yarn electron:make-macos-arm64
           
       - name: Save arm64 artifacts
         run: |
