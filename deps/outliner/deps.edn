@@ -7,7 +7,7 @@
   ;; Any other deps should be added here and to nbb.edn
   logseq/db             {:local/root "../db"}
   logseq/graph-parser   {:local/root "../graph-parser"}
-  metosin/malli {:mvn/version "0.18.0"}}
+  metosin/malli {:mvn/version "0.19.1"}}
  :aliases
  {:clj-kondo
   {:replace-deps {clj-kondo/clj-kondo {:mvn/version "2024.09.27"}}
