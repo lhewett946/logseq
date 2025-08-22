@@ -3953,10 +3953,10 @@ plist@3.1.0, plist@^3.0.0, plist@^3.0.4, plist@^3.0.5, plist@^3.1.0:
     base64-js "^1.5.1"
     xmlbuilder "^15.1.1"
 
-posthog-js@1.258.3:
-  version "1.258.3"
-  resolved "https://registry.yarnpkg.com/posthog-js/-/posthog-js-1.258.3.tgz#fdbc99036327fe8753e3d203e37e2aa115f40b91"
-  integrity sha512-bX4Ehzo/yBGY7o23CUAQelX+oUdLn5bKhEjTSiveXsjkZhRURxfKDinYTwI6tjs19FC8BWfHFyO3q3TgT2E7CA==
+posthog-js@1.260.2:
+  version "1.260.2"
+  resolved "https://registry.yarnpkg.com/posthog-js/-/posthog-js-1.260.2.tgz#66e034b3473e99ec985a415cd4acb60afc5d3201"
+  integrity sha512-2Q+QUz9j9+uG16wp0WcOEbezVsLZCobZyTX8NvWPMGKyPaf2lOsjbPjznsq5JiIt324B6NAqzpWYZTzvhn9k9Q==
   dependencies:
     core-js "^3.38.1"
     fflate "^0.4.8"
