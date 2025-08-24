@@ -51,7 +51,9 @@
   [config]
   (if (:sidebar? config)
     (dom/sel1 ".sidebar-item-list")
-    (util/app-scroll-container-node (:viewel config))))
+    (if-let [view-el (:viewel config)]
+      (util/app-scroll-container-node view-el)
+      (util/app-scroll-container-node))))
 
 (rum/defc header-checkbox < rum/static
   [{:keys [selected-all? selected-some? toggle-selected-all!] :as table}]
@@ -967,9 +969,7 @@
   [table row props option]
   (let [block (db/sub-block (:db/id row))
         row' (some->
-              (if (:block.temp/load-status block)
-                (assoc block :block.temp/refs-count (:block.temp/refs-count row))
-                row)
+              (if (:block.temp/load-status block) block row)
               (update :block/tags (fn [tags]
                                     (keep (fn [tag]
                                             (when-let [id (:db/id tag)]
@@ -1587,44 +1587,41 @@
         [ready? set-ready!] (hooks/use-state false)]
 
     (hooks/use-effect!
-      (fn [] (util/schedule #(set-ready! true)))
-      [])
+     (fn [] (util/schedule #(set-ready! true)))
+     [])
 
     (when (and ready? (seq rows))
       (ui/virtualized-list
-        {:ref #(reset! *scroller-ref %)
-         :increase-viewport-by {:top 300 :bottom 300}
-         :custom-scroll-parent (get-scroll-parent
-                                 (-> (:config option)
+       {:ref #(reset! *scroller-ref %)
+        :increase-viewport-by {:top 300 :bottom 300}
+        :custom-scroll-parent (get-scroll-parent
+                               (-> (:config option)
                                    (assoc :viewel (js/document.getElementById (:viewid option)))))
-         :compute-item-key (fn [idx]
-                             (let [block-id (util/nth-safe rows idx)]
-                               (str "table-row-" block-id)))
-         :skipAnimationFrameInResizeObserver true
-         :total-count (count rows)
-         :context {:scrolling scrolling?}
-         :is-scrolling set-scrolling!
-         :item-content (fn [idx _user ^js context]
-                         (let [option (assoc option
-                                        :scrolling? (.-scrolling context)
-                                        :table-view? true)]
-                           (lazy-item (:data table) idx option
-                             (fn [row]
-                               (table-row table row {} option)))))
-         :items-rendered (fn [props]
-                           (when (seq props)
-                             (set-items-rendered! true)))}))))
+        :compute-item-key (fn [idx]
+                            (let [block-id (util/nth-safe rows idx)]
+                              (str "table-row-" block-id)))
+        :skipAnimationFrameInResizeObserver true
+        :total-count (count rows)
+        :context {:scrolling scrolling?}
+        :is-scrolling set-scrolling!
+        :item-content (fn [idx _user ^js context]
+                        (let [option (assoc option
+                                            :scrolling? (.-scrolling context)
+                                            :table-view? true)]
+                          (lazy-item (:data table) idx option
+                                     (fn [row]
+                                       (table-row table row {} option)))))
+        :items-rendered (fn [props]
+                          (when (seq props)
+                            (set-items-rendered! true)))}))))
 
 (rum/defc table-view < rum/static
   [table option row-selection *scroller-ref]
   (let [selected-rows (shui/table-get-selection-rows row-selection (:rows table))
-        [items-rendered? set-items-rendered!] (hooks/use-state false)
-        [viewid] (hooks/use-state #(random-uuid))
-        option (assoc option :viewid viewid)]
+        [items-rendered? set-items-rendered!] (hooks/use-state false)]
     (shui/table
      (let [rows (:rows table)]
        [:div.ls-table-rows.content.overflow-x-auto.force-visible-scrollbar
-        {:id viewid}
         [:div.relative
          (table-header table option selected-rows)
 
@@ -1710,12 +1707,13 @@
                                       (gallery-card-item view-entity block config'))))}))]))
 
 (defn- run-effects!
-  [option {:keys [data]} *scroller-ref gallery?]
+  [option {:keys [data]} *scroller-ref gallery? set-ready?]
   (hooks/use-effect!
    (fn []
      (when (and (:current-page? (:config option)) (seq data) (map? (first data)) (:block/uuid (first data)))
        (ui-handler/scroll-to-anchor-block @*scroller-ref data gallery?)
-       (state/set-state! :editor/virtualized-scroll-fn #(ui-handler/scroll-to-anchor-block @*scroller-ref data gallery?))))
+       (state/set-state! :editor/virtualized-scroll-fn #(ui-handler/scroll-to-anchor-block @*scroller-ref data gallery?)))
+     (util/schedule #(set-ready? true)))
    []))
 
 (rum/defc view-sorting-item
@@ -1799,17 +1797,21 @@
                                    :dropdown-menu? true}))}
    (ui/icon "arrows-up-down")))
 
-(defn- view-cp
+(rum/defc view-cp
   [view-entity table option* {:keys [*scroller-ref display-type row-selection]}]
-  (let [option (assoc option* :view-entity view-entity)]
-    (case display-type
-      :logseq.property.view/type.list
-      (list-view option view-entity table *scroller-ref)
+  (let [[viewid] (hooks/use-state #(random-uuid))
+        option (assoc option*
+                      :view-entity view-entity
+                      :viewid viewid)]
+    [:div {:id viewid}
+     (case display-type
+       :logseq.property.view/type.list
+       (list-view option view-entity table *scroller-ref)
 
-      :logseq.property.view/type.gallery
-      (gallery-view option table view-entity (:rows table) *scroller-ref)
+       :logseq.property.view/type.gallery
+       (gallery-view option table view-entity (:rows table) *scroller-ref)
 
-      (table-view table option row-selection *scroller-ref))))
+       (table-view table option row-selection *scroller-ref))]))
 
 (defn- get-views
   [ent view-feature-type]
@@ -2046,9 +2048,10 @@
         table (shui/table-option table-map)
         *view-ref (rum/use-ref nil)
         gallery? (= display-type :logseq.property.view/type.gallery)
-        list-view? (= display-type :logseq.property.view/type.list)]
+        list-view? (= display-type :logseq.property.view/type.list)
+        [ready? set-ready?] (hooks/use-state false)]
 
-    (run-effects! option table-map *scroller-ref gallery?)
+    (run-effects! option table-map *scroller-ref gallery? set-ready?)
 
     [:div.flex.flex-col.gap-2.grid
      {:ref *view-ref}
@@ -2063,11 +2066,11 @@
                           :row-selection row-selection
                           :add-new-object! add-new-object!}]
            (if (and group-by-property-ident (not (number? (first (:rows table)))))
-             (when (seq (:rows table))
+             (when (and ready? (seq (:rows table)))
                [:div.flex.flex-col.border-t.pt-2.gap-2
                 (ui/virtualized-list
                  {:class (when list-view? "group-list-view")
-                  :custom-scroll-parent (util/app-scroll-container-node)
+                  :custom-scroll-parent (util/app-scroll-container-node (rum/deref *view-ref))
                   :increase-viewport-by {:top 300 :bottom 300}
                   :compute-item-key (fn [idx]
                                       (str "table-group" idx))
@@ -2264,11 +2267,15 @@
                                                          ;; grouped
                                                          (let [f (fn count-col
                                                                    [data]
-                                                                   (reduce (fn [total [_k col]]
-                                                                             (if (and (vector? (first col))
-                                                                                      (uuid? (ffirst col)))
-                                                                               (+ total (count-col col))
-                                                                               (+ total (count col)))) 0 data))]
+                                                                   (reduce (fn [total item]
+                                                                             (if (number? item)
+                                                                               (+ total 1)
+                                                                               (let [[_k col] item]
+                                                                                 (if (and (vector? (first col))
+                                                                                          (and (not (map? col))
+                                                                                               (uuid? (ffirst col))))
+                                                                                   (+ total (count-col col))
+                                                                                   (+ total (count col)))))) 0 data))]
                                                            (f data)))
                                           :group-by-property-ident group-by-property-ident
                                           :ref-pages-count ref-pages-count
@@ -2283,6 +2290,7 @@
     (when-let [repo (state/get-current-repo)]
       (when-let [k (case view-feature-type
                      :class-objects :frontend.worker.react/objects
+                     :property-objects :frontend.worker.react/objects
                      :linked-references :frontend.worker.react/refs
                      nil)]
         (let [*version (atom 0)]

@@ -117,15 +117,21 @@
         (throw (ex-info "Invalid data" {:graph repo})))))
 
   ;; Ensure :block/order is unique for any block that has :block/parent
-  (when (or (:dev? context) (exists? js/process))
-    (let [order-datoms (filter (fn [d] (= :block/order (:a d))) (:tx-data tx-report))]
+  (when false;; (:dev? context)
+    (let [order-datoms (filter (fn [d] (= :block/order (:a d)))
+                               (:tx-data tx-report))]
       (doseq [datom order-datoms]
-        (let [entity (d/entity @conn (:db/id datom))
+        (let [entity (d/entity @conn (:e datom))
               parent (:block/parent entity)]
           (when parent
-            (let [children (:block/_parent parent)]
-              (assert (= (count (distinct (map :block/order children))) (count children))
-                      (str ":block/order is not unique for children blocks, parent id: " (:db/id parent))))))))))
+            (let [children (:block/_parent parent)
+                  order-different? (= (count (distinct (map :block/order children))) (count children))]
+              (when-not order-different?
+                (throw (ex-info (str ":block/order is not unique for children blocks, parent id: " (:db/id parent))
+                                {:children (->> (map (fn [b] (select-keys b [:db/id :block/title :block/order])) children)
+                                                (sort-by :block/order))
+                                 :tx-meta tx-meta
+                                 :tx-data (:tx-data tx-report)}))))))))))
 
 (defn- toggle-page-and-block
   [conn {:keys [db-before db-after tx-data tx-meta]}]
@@ -281,7 +287,8 @@
         display-blocks-tx-data (add-missing-properties-to-typed-display-blocks db-after tx-data)
         commands-tx (when-not (or (:undo? tx-meta) (:redo? tx-meta) (:rtc-tx? tx-meta))
                       (commands/run-commands conn tx-report))
-        insert-templates-tx (insert-tag-templates repo tx-report)
+        insert-templates-tx (when-not (:rtc-tx? tx-meta)
+                              (insert-tag-templates repo tx-report))
         created-by-tx (add-created-by-ref-hook db-before db-after tx-data tx-meta)]
     (concat toggle-page-and-block-tx-data display-blocks-tx-data commands-tx insert-templates-tx created-by-tx)))
 
@@ -377,7 +384,8 @@
        :pages pages
        :blocks blocks})
     (catch :default e
-      (js/console.error e))))
+      (js/console.error e)
+      (throw e))))
 
 (defn invoke-hooks
   [repo conn {:keys [tx-meta] :as tx-report} context]

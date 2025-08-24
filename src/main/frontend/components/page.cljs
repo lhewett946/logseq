@@ -42,7 +42,6 @@
             [frontend.util :as util]
             [frontend.util.text :as text-util]
             [goog.object :as gobj]
-            [logseq.common.config :as common-config]
             [logseq.common.util :as common-util]
             [logseq.common.util.page-ref :as page-ref]
             [logseq.db :as ldb]
@@ -108,31 +107,37 @@
         has-children? (:block/_parent block)
         page? (ldb/page? block)
         opacity-class (cond
-                        (and (util/mobile?) (not editing?)) "opacity-50"
+                        (and editing? has-children?) "opacity-0"
+                        (and (util/mobile?)
+                             (or (some-> (:block/title (last (ldb/sort-by-order (:block/_parent block)))) string/blank?)
+                                 (and (not has-children?) (string/blank? (:block/title block)))))
+                        "opacity-0"
+                        (util/mobile?) "opacity-50"
                         has-children? "opacity-0"
                         :else "opacity-50")
         config (dissoc config* :page)]
-    (when (and (or page? (util/mobile?))
-               (not= (:block/title block) common-config/quick-add-page-name))
+    (when (or page? (util/mobile?))
       [:div.ls-block.block-add-button.flex-1.flex-col.rounded-sm.cursor-text.transition-opacity.ease-in.duration-100.!py-0
        {:class opacity-class
         :parentblockid (:db/id block)
         :ref *ref
         :on-click (fn [e]
-                    (util/stop e)
-                    (state/set-state! :editor/container-id container-id)
-                    (editor-handler/api-insert-new-block! "" (merge config
-                                                                    {:block-uuid (:block/uuid block)})))
+                    (when-not (and (util/mobile?) editing?)
+                      (util/stop e)
+                      (state/set-state! :editor/container-id container-id)
+                      (editor-handler/api-insert-new-block! "" (merge config
+                                                                      {:block-uuid (:block/uuid block)}))))
         :on-mouse-over (fn []
-                         (let [ref (rum/deref *ref)
-                               prev-block (util/get-prev-block-non-collapsed (rum/deref *ref) {:up-down? true})]
-                           (cond
-                             (and prev-block (dom/has-class? prev-block "is-blank"))
-                             (dom/add-class! ref "opacity-0")
-                             (and prev-block has-children?)
-                             (dom/add-class! ref "opacity-50")
-                             :else
-                             (dom/add-class! ref "opacity-100"))))
+                         (when-not (and (util/mobile?) editing?)
+                           (let [ref (rum/deref *ref)
+                                 prev-block (util/get-prev-block-non-collapsed (rum/deref *ref) {:up-down? true})]
+                             (cond
+                               (and prev-block (dom/has-class? prev-block "is-blank"))
+                               (dom/add-class! ref "opacity-0")
+                               (and prev-block has-children?)
+                               (dom/add-class! ref "opacity-50")
+                               :else
+                               (dom/add-class! ref "opacity-100")))))
         :on-mouse-leave #(do
                            (dom/remove-class! (rum/deref *ref) "opacity-50")
                            (dom/remove-class! (rum/deref *ref) "opacity-100"))
@@ -165,7 +170,7 @@
                                     (date/journal-title->int (date/today))))
                        (state/pub-event! [:journal/insert-template page-name]))))
                  state)}
-  [state block* {:keys [sidebar? whiteboard?] :as config}]
+  [state block* {:keys [sidebar? whiteboard? hide-add-button?] :as config}]
   (when-let [id (:db/id block*)]
     (let [block (db/sub-block id)
           block-id (:block/uuid block)
@@ -201,7 +206,7 @@
               blocks (if block? [block] (db/sort-by-order children block))]
           [:div.relative
            (page-blocks-inner block blocks config sidebar? whiteboard? block-id)
-           (when (or (util/mobile?) (empty? blocks))
+           (when-not hide-add-button?
              (add-button block config))])))))
 
 (rum/defc today-queries < rum/reactive
