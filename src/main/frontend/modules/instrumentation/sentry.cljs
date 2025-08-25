@@ -1,5 +1,6 @@
 (ns frontend.modules.instrumentation.sentry
-  (:require ["@sentry/react" :as Sentry]
+  (:require ["@sentry/react" :as SentryReact]
+            ["@sentry/browser" :as SentryBrowser]
             [frontend.config :as config]
             [frontend.mobile.util :as mobile-util]
             [frontend.util :as util]
@@ -7,7 +8,7 @@
 
 (goog-define SENTRY-DSN "")
 
-(def config
+(def sentry-config
   {:dsn SENTRY-DSN
    :release (util/format "logseq%s@%s" (cond
                                          (mobile-util/native-android?) "-android"
@@ -61,10 +62,12 @@
 
 (defn init []
   (when (and (not config/dev?) (not-empty SENTRY-DSN))
-    (let [config' (clj->js config)]
-      (Sentry/init config'))))
+    (let [config' (clj->js sentry-config)]
+      (SentryReact/init config'))))
 
 (defn set-user!
   [id]
-  (Sentry/configureScope (fn [scope]
-                           (.setUser scope #js {:id id}))))
+  (let [scope (.getCurrentScope SentryBrowser)]
+    (when scope
+      (.setUser scope #js {:id id}))))
+
