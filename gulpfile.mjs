@@ -1,12 +1,16 @@
-const fs = require('fs')
-const utils = require('util')
-const cp = require('child_process')
-const exec = utils.promisify(cp.exec)
-const path = require('path')
-const gulp = require('gulp')
-const del = require('del')
-const ip = require('ip')
-const replace = require('gulp-replace')
+import fs from 'fs';
+import { promisify } from 'util';
+import cp from 'child_process';
+const exec = promisify(cp.exec);
+import path from 'path';
+import gulp from 'gulp';
+import { deleteAsync } from 'del';
+import ip from 'ip';
+import replace from 'gulp-replace';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const outputPath = path.join(__dirname, 'static')
 const outputJsPath = path.join(outputPath, 'js')
@@ -54,7 +58,7 @@ const css = {
 
 const common = {
   clean () {
-    return del(
+    return deleteAsync(
       ['./static/**/*', '!./static/node_modules'])
   },
 
@@ -250,24 +254,25 @@ const common = {
   },
 }
 
-exports.electron = () => {
+
+export const electron = () => {
   if (!fs.existsSync(path.join(outputPath, 'node_modules'))) {
     cp.execSync('yarn', {
       cwd: outputPath,
       stdio: 'inherit',
-    })
+    });
   }
 
   cp.execSync('yarn electron:dev', {
     cwd: outputPath,
     stdio: 'inherit',
-  })
-}
+  });
+};
 
-exports.electronMaker = async () => {
+export const electronMaker = async () => {
   cp.execSync('yarn cljs:release-electron', {
     stdio: 'inherit',
-  })
+  });
 
   const pkgPath = path.join(outputPath, 'package.json')
   const pkg = require(pkgPath)
@@ -296,16 +301,33 @@ exports.electronMaker = async () => {
   })
 }
 
-exports.cap = common.runCapWithLocalDevServerEntry
-exports.clean = common.clean
-exports.watch = gulp.series(
+export const cap = common.runCapWithLocalDevServerEntry;
+export const clean = common.clean;
+
+export const watch = gulp.series(
   common.syncResourceFile,
-  common.syncAssetFiles, common.switchReactDevelopmentMode,
-  gulp.parallel(common.keepSyncResourceFile, css.watchCSS))
-exports.watchMobile = gulp.series(
-  common.syncResourceFile, common.syncAssetFiles,
-  gulp.parallel(common.keepSyncResourceFile, common.keepSyncWorkersToMobile, css.watchMobileCSS))
-exports.build = gulp.series(common.clean, common.syncResourceFile,
-  common.syncAssetFiles, css.buildCSS)
-exports.buildMobile = gulp.series(common.clean, common.syncResourceFile,
-  common.syncAssetFiles, css.buildMobileCSS)
+  common.syncAssetFiles,
+  common.switchReactDevelopmentMode,
+  gulp.parallel(common.keepSyncResourceFile, css.watchCSS)
+);
+
+export const watchMobile = gulp.series(
+  common.syncResourceFile,
+  common.syncAssetFiles,
+  gulp.parallel(common.keepSyncResourceFile, common.keepSyncWorkersToMobile, css.watchMobileCSS)
+);
+
+export const build = gulp.series(
+  common.clean,
+  common.syncResourceFile,
+  common.syncAssetFiles,
+  css.buildCSS
+);
+
+export const buildMobile = gulp.series(
+  common.clean,
+  common.syncResourceFile,
+  common.syncAssetFiles,
+  css.buildMobileCSS
+);
+
