@@ -13,8 +13,7 @@ const or = (...args) => {
   }, initialValue)
 }
 
-
-module.exports = {
+export default {
   plugins: {
     'autoprefixer': {},
     'postcss-import-ext-glob': {},
@@ -24,4 +23,5 @@ module.exports = {
     tailwindcss: {},
     ...(process.env.NODE_ENV === 'production' ? { cssnano: {} } : {})
   }
-}
+};
+
