@@ -176,7 +176,7 @@
                                            :redef false}}}
 
   :test {:target :node-test
-         :output-to "static/tests.js"
+         :output-to "static/tests.cjs"
          :closure-defines {frontend.util/NODETEST true
                            logseq.shui.util/NODETEST true}
          :devtools {:enabled false}
