@@ -617,6 +617,7 @@
                      (when (:block/uuid target-block)
                        (d/entity db [:block/uuid (:block/uuid target-block)])))]
     (let [linked (:block/link block)
+          library? (ldb/library? block)
           up-down? (= outliner-op :move-blocks-up-down)
           [block sibling?] (cond
                              up-down?
@@ -648,7 +649,7 @@
                                  [last-child true]
                                  [block false])
                                :else
-                               [block sibling?])
+                               [block (if library? false sibling?)])
 
                              linked
                              (get-last-child-or-self db linked)
@@ -717,15 +718,17 @@
                        (if-let [eid (or (:db/id b)
                                         (when-let [id (:block/uuid b)]
                                           [:block/uuid id]))]
-                         (->
-                          (if-let [e (if (de/entity? b) b (d/entity db eid))]
-                            (merge
-                             (into {} e)
-                             {:db/id (:db/id e)
-                              :block/title (or (:block/raw-title e) (:block/title e))}
-                             b)
-                            b)
-                          (dissoc :block/tx-id :block/refs :block/path-refs))
+                         (let [b (if-let [e (if (de/entity? b) b (d/entity db eid))]
+                                   (merge
+                                    (into {} e)
+                                    {:db/id (:db/id e)
+                                     :block/title (or (:block/raw-title e) (:block/title e))}
+                                    b)
+                                   b)
+                               dissoc-keys (concat [:block/tx-id :block/path-refs]
+                                                   (when (contains? #{:insert-template-blocks :paste} outliner-op)
+                                                     [:block/refs]))]
+                           (apply dissoc b dissoc-keys))
                          b))
                      blocks)
         [target-block sibling?] (get-target-block db blocks target-block opts)
