@@ -176,13 +176,13 @@ For this workflow:
 1. Run `clj -M:test watch test` in one shell
 2. Focus tests:
   1. Add `^:focus` metadata flags to tests e.g. `(deftest ^:focus test-name ...)`.
-  2. In another shell, run `node static/tests.js -i focus` to only run those
-  tests. To run all tests except those tests run `node static/tests.js -e focus`.
-3. Or focus namespaces: Using the regex option `-r`, run tests for `frontend.db.query-dsl-test` with `node static/tests.js -r query-dsl`.
+  2. In another shell, run `node static/tests.cjs -i focus` to only run those
+  tests. To run all tests except those tests run `node static/tests.cjs -e focus`.
+3. Or focus namespaces: Using the regex option `-r`, run tests for `frontend.db.query-dsl-test` with `node static/tests.cjs -r query-dsl`.
 
-Multiple options can be specified to AND selections. For example, to run all `frontend.db.query-dsl-test` tests except for the focused one: `node static/tests.js -r query-dsl -e focus`
+Multiple options can be specified to AND selections. For example, to run all `frontend.db.query-dsl-test` tests except for the focused one: `node static/tests.cjs -r query-dsl -e focus`
 
-For help on more options, run `node static/tests.js -h`.
+For help on more options, run `node static/tests.cjs -h`.
 
 #### Autorun Tests
 
