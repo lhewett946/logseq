@@ -1017,10 +1017,13 @@
                           page) children label)
 
       (:block/name page)
-      [:span (str (when tag? "#")
-                  (when-not tag? page-ref/left-brackets)
-                  (:block/name page)
-                  (when-not tag? page-ref/right-brackets))]
+      [:span
+       (when tag? "#")
+       (when-not tag?
+         [:span.text-gray-500.bracket page-ref/left-brackets])
+       (or label (:block/name page))
+       (when-not tag?
+         [:span.text-gray-500.bracket page-ref/right-brackets])]
 
       :else
       nil)))
@@ -3426,11 +3429,11 @@
   [^js e block *control-show? block-id doc-mode?]
   (let [mouse-moving? (not= (some-> @*block-last-mouse-event (.-clientY)) (.-clientY e))
         block-dom-node (util/rec-get-node (.-target e) "ls-block")]
+    (reset! *control-show? true)
     (when (and mouse-moving?
                (not @*dragging?)
                (not= (:block/uuid block) (:block/uuid (state/get-edit-block))))
       (.preventDefault e)
-      (reset! *control-show? true)
       (when-let [parent (gdom/getElement block-id)]
         (let [node (.querySelector parent ".bullet-container")]
           (when doc-mode?
