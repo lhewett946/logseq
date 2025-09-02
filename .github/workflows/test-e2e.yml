@@ -56,7 +56,7 @@ jobs:
       - name: Prepare E2E test build
         run: |
           yarn gulp:build
-          clojure -M:cljs release app workers --config-merge "{:closure-defines {frontend.config/DEV-RELEASE true}}" --debug
+          clojure -M:cljs release app db-worker inference-worker --config-merge "{:closure-defines {frontend.config/DEV-RELEASE true}}" --debug
           yarn webpack-app-build
 
       - name: Run e2e tests
@@ -107,7 +107,7 @@ jobs:
   #    - name: Prepare E2E test build
   #      run: |
   #        yarn gulp:build 
-  #        clojure -M:cljs release app workers --config-merge "{:closure-defines {frontend.config/DEV-RELEASE true}}" --debug
+  #        clojure -M:cljs release app db-worker inference-worker --config-merge "{:closure-defines {frontend.config/DEV-RELEASE true}}" --debug
   #        yarn webpack-app-build
   #        rsync -avz --exclude node_modules --exclude android --exclude ios ./static/ ./public/
   #
