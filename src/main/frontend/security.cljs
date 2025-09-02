@@ -8,4 +8,4 @@
 
 (defn sanitize-html
   [html]
-  (.sanitize (.-default DOMPurify) html sanitization-options))
+  (.sanitize DOMPurify html sanitization-options))
