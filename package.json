@@ -3,6 +3,7 @@
     "version": "0.0.1",
     "private": true,
     "main": "static/electron.js",
+    "type": "module",
     "engines": {
         "node": ">=22.15.0"
     },
@@ -19,7 +20,7 @@
         "autoprefixer": "^10.4.13",
         "cross-env": "^7.0.3",
         "cssnano": "^5.1.13",
-        "del": "^6.0.0",
+        "del": "^8.0.0",
         "glob": "11.0.3",
         "gulp": "^4.0.2",
         "gulp-postcss": "^10.0.0",
@@ -93,7 +94,7 @@
         "cljs:release-app": "clojure -M:cljs release app db-worker inference-worker",
         "cljs:release-publishing": "clojure -M:cljs release app publishing",
         "cljs:test": "clojure -M:test compile test",
-        "cljs:run-test": "node static/tests.js",
+        "cljs:run-test": "node static/tests.cjs",
         "cljs:dev-release-app": "clojure -M:cljs release app db-worker inference-worker --config-merge \"{:closure-defines {frontend.config/DEV-RELEASE true}}\"",
         "cljs:dev-release-electron": "clojure -M:cljs release app db-worker inference-worker electron --debug --config-merge \"{:closure-defines {frontend.config/DEV-RELEASE true}}\" && clojure -M:cljs release publishing",
         "cljs:debug": "clojure -M:cljs release app db-worker inference-worker --debug",
@@ -142,6 +143,7 @@
         "@logseq/diff-merge": "^0.2.2",
         "@logseq/react-tweet-embed": "1.3.1-1",
         "@radix-ui/colors": "^3.0.0",
+        "@sentry/browser": "^10.5.0",
         "@sentry/react": "^9.20.0",
         "@sentry/tracing": "^7.120.3",
         "@sqlite.org/sqlite-wasm": "^3.50.3-build1",
