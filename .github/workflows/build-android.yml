@@ -41,15 +41,6 @@ jobs:
           yarn install
           yarn release-app
   
-      - name: Prepare public Directory
-        run: |
-          cp -r static public/
-          rm -rvf public/js/publishing
-          rm -rvf public/js/*.js.map || true
-          rm -rvf public/*.*
-          rm -rvf public/ios
-          rm -rvf android/app/src/main/assets/public || true
-  
       - name: Sync public to Android Project
         run: npx cap sync android
     
