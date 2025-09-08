@@ -20,7 +20,9 @@
                                   "react-dom" {:target :global
                                                :global "ReactDOM"}
                                   "@excalidraw/excalidraw" {:target :global, 
-                                                            :global "Excalidraw"}}} ;; handle `require(xxx.css)`
+                                                            :global "Excalidraw"}
+                                  "remove-accents" {:target :npm
+                                                    :require "remove-accents/index.js"}}} ;; handle `require(xxx.css)`
         :modules       {:main
                         {:init-fn frontend.core/init}
                         :code-editor
