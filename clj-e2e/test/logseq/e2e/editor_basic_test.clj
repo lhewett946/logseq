@@ -46,23 +46,13 @@
 
 (deftest move-blocks-mod+shift+m
   (testing "move blocks using `mod+shift+m`"
-    (println "Starting move-blocks-mod+shift-m test")
     (p/new-page "Target page")
-    (println "Created target page")
-    (p/new-page "Source page") 
-    (println "Created source page")
+    (p/new-page "Source page")
     (b/new-blocks ["b1" "b2" "b3"])
-    (println "Created blocks")
     (b/select-blocks 3)
-    (println "Selected blocks")
     (k/press "ControlOrMeta+Shift+m")
-    (println "Pressed keyboard shortcut")
     (w/fill "input[placeholder=\"Move blocks to\"]" "Target page")
-    (println "Filled move input")
-        ;; Increase timeout and add explicit wait
-    (w/with-timeout 30000
-      (w/wait-for (w/get-by-test-id "Target page"))
-      (println "Found target page element"))
+    (w/wait-for (w/get-by-test-id "Target page"))
     (.focus (w/-query ".cp__cmdk-search-input"))
     (k/enter)
     (assert/assert-have-count ".ls-page-blocks .page-blocks-inner .ls-block" 0)))
