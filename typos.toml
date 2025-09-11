@@ -25,4 +25,4 @@ tne = "tne"
 Damon = "Damon"
 typ = "typ"
 [files]
-extend-exclude = ["resources/*", "src/resources/*", "scripts/resources/*", "src/test/fixtures/*"]
+extend-exclude = ["resources/*", "src/resources/*", "scripts/resources/*", "src/test/fixtures/*", "src/test/migration/*.transit"]
