@@ -39,7 +39,7 @@ jobs:
       - name: Compile CLJS
         run: |
           yarn install
-          yarn release-app
+          yarn release-mobile
   
       - name: Sync public to Android Project
         run: npx cap sync android

@@ -1,7 +1,6 @@
 (ns mobile.state
   "Mobile state"
-  (:require [clojure.string :as string]
-            [frontend.rum :as r]))
+  (:require [frontend.rum :as r]))
 
 (defonce *tab (atom "home"))
 (defn set-tab! [tab] (reset! *tab tab))
@@ -34,6 +33,14 @@
   [data]
   (reset! *popup-data data))
 
+(defn close-popup!
+  []
+  (set-popup! nil))
+
+(defn quick-add-open?
+  []
+  (= :ls-quick-add (get-in @*popup-data [:opts :id])))
+
 (defonce *left-sidebar-open? (atom false))
 
 (defn open-left-sidebar!
@@ -54,9 +61,6 @@
 (defonce *log (atom []))
 (defn log-append!
   [record]
-  (swap! *log conj record))
-
-(defn log->str
-  []
-  (->> @*log
-       (string/join "\n\n")))
+  (swap! *log conj record)
+  (when (> (count @*log) 1000)
+    (reset! *log (subvec @*log 800))))

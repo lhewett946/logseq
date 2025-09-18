@@ -31,6 +31,14 @@ so need to pull earlier remote-data from websocket."})
 
 (defmulti ^:private transact-db! (fn [action & _args] action))
 
+(defn- block-reuse-db-id
+  [block]
+  (if-let [old-eid (@worker-state/*deleted-block-uuid->db-id (:block/uuid block))]
+    (assoc block
+           :db/id old-eid
+           :block.temp/use-old-db-id? true)
+    block))
+
 (defmethod transact-db! :delete-blocks [_ & args]
   (outliner-tx/transact!
    {:persist-op? false
@@ -105,8 +113,9 @@ so need to pull earlier remote-data from websocket."})
     :outliner-op :insert-blocks
     :transact-opts {:repo repo
                     :conn conn}}
-   (let [opts' (assoc opts :keep-block-order? true)]
-     (outliner-core/insert-blocks! repo conn blocks target opts')))
+   (let [opts' (assoc opts :keep-block-order? true)
+         blocks' (map block-reuse-db-id blocks)]
+     (outliner-core/insert-blocks! repo conn blocks' target opts')))
   (doseq [block blocks]
     (assert (some? (d/entity @conn [:block/uuid (:block/uuid block)]))
             {:msg "insert-block failed"
@@ -200,7 +209,7 @@ so need to pull earlier remote-data from websocket."})
       (case [whiteboard-page-block? (some? local-parent) (some? remote-block-order)]
         [false true true]
         (do (if move?
-              (transact-db! :move-blocks repo conn [b] local-parent {:sibling? false})
+              (transact-db! :move-blocks repo conn [(block-reuse-db-id b)] local-parent {:sibling? false})
               (transact-db! :insert-blocks repo conn
                             [{:block/uuid block-uuid
                               :block/title ""}]
@@ -555,8 +564,11 @@ so need to pull earlier remote-data from websocket."})
     (doseq [{:keys [self _page-name]
              title :block/title
              :as op-value} update-page-ops]
-      (let [create-opts {:uuid self}
-            [_ page-name page-uuid] (worker-page/rtc-create-page! conn config (ldb/read-transit-str title) create-opts)]
+      (let [create-opts {:uuid self
+                         :old-db-id (@worker-state/*deleted-block-uuid->db-id self)}
+            [_ page-name page-uuid] (worker-page/rtc-create-page! conn config
+                                                                  (ldb/read-transit-str title)
+                                                                  create-opts)]
         ;; TODO: current page-create fn is buggy, even provide :uuid option, it will create-page with different uuid,
         ;; if there's already existing same name page
         (assert (= page-uuid self) {:page-name page-name :page-uuid page-uuid :should-be self})
@@ -588,7 +600,6 @@ so need to pull earlier remote-data from websocket."})
     (let [remote-t (:t remote-update-data)
           remote-t-before (:t-before remote-update-data)
           local-tx (client-op/get-local-tx repo)]
-      (rtc-log-and-state/update-remote-t graph-uuid remote-t)
       (cond
         (not (and (pos? remote-t)
                   (pos? remote-t-before)))
@@ -615,6 +626,7 @@ so need to pull earlier remote-data from websocket."})
               update-page-ops (vals update-page-ops-map)
               remove-page-ops (vals remove-page-ops-map)
               db-before @conn]
+          (rtc-log-and-state/update-remote-t graph-uuid remote-t)
           (js/console.groupCollapsed "rtc/apply-remote-ops-log")
           (batch-tx/with-batch-tx-mode conn {:rtc-tx? true
                                              :persist-op? false

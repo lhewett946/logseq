@@ -11,6 +11,7 @@
             [frontend.worker.rtc.malli-schema :as rtc-schema]
             [frontend.worker.rtc.remote-update :as r.remote-update]
             [frontend.worker.rtc.skeleton :as r.skeleton]
+            [frontend.worker.rtc.throttle :as r.throttle]
             [frontend.worker.rtc.ws :as ws]
             [frontend.worker.rtc.ws-util :as ws-util]
             [logseq.db :as ldb]
@@ -18,22 +19,61 @@
             [missionary.core :as m]
             [tick.core :as tick]))
 
-(defn- new-task--register-graph-updates
-  [get-ws-create-task graph-uuid major-schema-version repo]
+(defn- apply-remote-updates-from-apply-ops
+  [apply-ops-resp graph-uuid repo conn date-formatter add-log-fn]
+  (if-let [remote-ex (:ex-data apply-ops-resp)]
+    (do (add-log-fn :rtc.log/pull-remote-data (assoc remote-ex :sub-type :pull-remote-data-exception))
+        (case (:type remote-ex)
+          :graph-lock-failed nil
+          :graph-lock-missing
+          (throw r.ex/ex-remote-graph-lock-missing)
+          :rtc.exception/get-s3-object-failed
+          (throw (ex-info (:ex-message apply-ops-resp) (:ex-data apply-ops-resp)))
+          ;;else
+          (throw (ex-info "Unavailable3" {:remote-ex remote-ex}))))
+    (do (assert (pos? (:t apply-ops-resp)) apply-ops-resp)
+        (r.remote-update/apply-remote-update
+         graph-uuid repo conn date-formatter {:type :remote-update :value apply-ops-resp} add-log-fn))))
+
+(defn- new-task--init-request
+  [get-ws-create-task graph-uuid major-schema-version repo conn *last-calibrate-t *server-schema-version add-log-fn]
   (m/sp
-    (try
-      (let [{remote-t :t :as resp}
-            (m/? (ws-util/send&recv get-ws-create-task {:action "register-graph-updates"
-                                                        :graph-uuid graph-uuid
-                                                        :schema-version (str major-schema-version)}))]
-        (rtc-log-and-state/update-remote-t graph-uuid remote-t)
-        (when-not (client-op/get-local-tx repo)
-          (client-op/update-local-tx repo remote-t))
-        resp)
-      (catch :default e
-        (if (= :rtc.exception/remote-graph-not-ready (:type (ex-data e)))
-          (throw (ex-info "remote graph is still creating" {:missionary/retry true} e))
-          (throw e))))))
+    (let [t-before (client-op/get-local-tx repo)
+          get-graph-skeleton? (or (nil? @*last-calibrate-t)
+                                  (< 500 (- t-before @*last-calibrate-t)))]
+      (try
+        (let [{remote-t :t
+               server-schema-version :server-schema-version
+               server-builtin-db-idents :server-builtin-db-idents
+               :as resp}
+              (m/? (ws-util/send&recv get-ws-create-task {:action "init-request"
+                                                          :graph-uuid graph-uuid
+                                                          :schema-version (str major-schema-version)
+                                                          :t-before (or t-before 1)
+                                                          :get-graph-skeleton get-graph-skeleton?}))]
+          (if-let [remote-ex (:ex-data resp)]
+            (do
+              (add-log-fn :rtc.log/init-request remote-ex)
+              (case (:type remote-ex)
+                :graph-lock-failed nil
+                :graph-lock-missing (throw r.ex/ex-remote-graph-lock-missing)
+                ;; else
+                (throw (ex-info "Unavailable4" {:remote-ex remote-ex}))))
+            (do
+              (when server-schema-version
+                (reset! *server-schema-version server-schema-version)
+                (reset! *last-calibrate-t remote-t))
+              (when remote-t
+                (rtc-log-and-state/update-remote-t graph-uuid remote-t)
+                (when (not t-before)
+                  (client-op/update-local-tx repo remote-t)))
+              (when (and server-schema-version server-builtin-db-idents)
+                (r.skeleton/calibrate-graph-skeleton server-schema-version server-builtin-db-idents @conn))
+              resp)))
+        (catch :default e
+          (if (= :rtc.exception/remote-graph-not-ready (:type (ex-data e)))
+            (throw (ex-info "remote graph is still creating" {:missionary/retry true} e))
+            (throw e)))))))
 
 (def ^:private *register-graph-updates-sent
   "ws -> [bool, added-inst, [graph-uuid,major-schema-version,repo]]"
@@ -53,8 +93,8 @@
 (defn ensure-register-graph-updates--memoized
   "Return a task: get or create a mws(missionary wrapped websocket).
   see also `ws/get-mws-create`.
-  But ensure `register-graph-updates` and `calibrate-graph-skeleton` has been sent"
-  [get-ws-create-task graph-uuid major-schema-version repo conn
+  But ensure `init-request` and `calibrate-graph-skeleton` has been sent"
+  [get-ws-create-task graph-uuid major-schema-version repo conn date-formatter
    *last-calibrate-t *online-users *server-schema-version add-log-fn]
   (m/sp
     (let [ws (m/? get-ws-create-task)
@@ -80,14 +120,17 @@
                                          10000)))]
                 (reset! *online-users online-users)))
             :succ (constantly nil)))
-        (let [{:keys [max-remote-schema-version]}
+        (let [{:keys [max-remote-schema-version] :as init-request-resp}
               (try
                 (m/?
                  (c.m/backoff
                   {:delay-seq ;retry 5 times if remote-graph is creating (4000 8000 16000 32000 64000)
                    (take 5 (drop 2 c.m/delays))
                    :reset-flow worker-flows/online-event-flow}
-                  (new-task--register-graph-updates get-ws-create-task graph-uuid major-schema-version repo)))
+                  (new-task--init-request
+                   get-ws-create-task graph-uuid major-schema-version repo conn
+                   *last-calibrate-t *server-schema-version
+                   add-log-fn)))
                 (catch :default e
                   (swap! *register-graph-updates-sent assoc-in [ws 0] false)
                   (throw e)))]
@@ -97,15 +140,8 @@
                                     max-remote-schema-version db-schema/version major-schema-version)
                          :repo repo
                          :graph-uuid graph-uuid
-                         :remote-schema-version max-remote-schema-version})))
-        (let [t (client-op/get-local-tx repo)]
-          (when (or (nil? @*last-calibrate-t)
-                    (< 500 (- t @*last-calibrate-t)))
-            (let [{:keys [server-schema-version _server-builtin-db-idents]}
-                  (m/? (r.skeleton/new-task--calibrate-graph-skeleton
-                        get-ws-create-task graph-uuid major-schema-version @conn))]
-              (reset! *server-schema-version server-schema-version))
-            (reset! *last-calibrate-t t))))
+                         :remote-schema-version max-remote-schema-version}))
+          (apply-remote-updates-from-apply-ops init-request-resp graph-uuid repo conn date-formatter add-log-fn)))
       ws)))
 
 (defn- ->pos
@@ -418,11 +454,13 @@
       (when-let [ops-for-remote (rtc-schema/to-ws-ops-decoder remote-ops)]
         (let [local-tx (client-op/get-local-tx repo)
               r (try
-                  (m/? (ws-util/send&recv get-ws-create-task
-                                          (cond-> {:action "apply-ops"
-                                                   :graph-uuid graph-uuid :schema-version (str major-schema-version)
-                                                   :ops ops-for-remote :t-before (or local-tx 1)}
-                                            (true? @*remote-profile?) (assoc :profile true))))
+                  (let [message (cond-> {:action "apply-ops"
+                                         :graph-uuid graph-uuid :schema-version (str major-schema-version)
+                                         :ops ops-for-remote :t-before (or local-tx 1)}
+                                  (true? @*remote-profile?) (assoc :profile true))
+                        r (m/? (ws-util/send&recv get-ws-create-task message))]
+                    (r.throttle/add-rtc-api-call-record! message)
+                    r)
                   (catch :default e
                     (rollback repo block-ops-map-coll update-kv-value-ops-map-coll rename-db-ident-ops-map-coll)
                     (throw e)))]
@@ -456,17 +494,9 @@
   [repo conn graph-uuid major-schema-version date-formatter get-ws-create-task add-log-fn]
   (m/sp
     (let [local-tx (client-op/get-local-tx repo)
-          r (m/? (ws-util/send&recv get-ws-create-task {:action "apply-ops"
-                                                        :graph-uuid graph-uuid :schema-version (str major-schema-version)
-                                                        :ops [] :t-before (or local-tx 1)}))]
-      (if-let [remote-ex (:ex-data r)]
-        (do (add-log-fn :rtc.log/pull-remote-data (assoc remote-ex :sub-type :pull-remote-data-exception))
-            (case (:type remote-ex)
-              :graph-lock-failed nil
-              :graph-lock-missing (throw r.ex/ex-remote-graph-lock-missing)
-              :rtc.exception/get-s3-object-failed nil
-              ;;else
-              (throw (ex-info "Unavailable3" {:remote-ex remote-ex}))))
-        (do (assert (pos? (:t r)) r)
-            (r.remote-update/apply-remote-update
-             graph-uuid repo conn date-formatter {:type :remote-update :value r} add-log-fn))))))
+          message {:action "apply-ops"
+                   :graph-uuid graph-uuid :schema-version (str major-schema-version)
+                   :ops [] :t-before (or local-tx 1)}
+          r (m/? (ws-util/send&recv get-ws-create-task message))]
+      (r.throttle/add-rtc-api-call-record! message)
+      (apply-remote-updates-from-apply-ops r graph-uuid repo conn date-formatter add-log-fn))))

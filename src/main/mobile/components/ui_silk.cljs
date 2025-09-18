@@ -1,7 +1,9 @@
 (ns mobile.components.ui-silk
   "Mobile top header and bottom tabs"
   (:require [frontend.handler.editor :as editor-handler]
+            [frontend.state :as state]
             [frontend.util :as util]
+            [logseq.shui.hooks :as hooks]
             [logseq.shui.ui :as shui]
             [mobile.state :as mobile-state]
             [rum.core :as rum]))
@@ -23,10 +25,13 @@
 (rum/defc app-silk-tabs []
   (let [[current-tab set-tab!] (mobile-state/use-tab)]
     [:div.app-silk-tabs
-     {:on-pointer-down #(some-> (.-target ^js %)
-                                ^js (.closest ".as-item")
-                                ^js (.-dataset)
-                                ^js (.-tab) (set-tab!))}
+     {:on-pointer-down (fn [^js e]
+                         (when (= current-tab "home")
+                           (util/scroll-to-top false))
+                         (some-> (.-target e)
+                                 ^js (.closest ".as-item")
+                                 ^js (.-dataset)
+                                 ^js (.-tab) (set-tab!)))}
      [:span.as-item
       {:class (when (= current-tab "home") "active")
        :data-tab "home"}
@@ -41,10 +46,15 @@
       [:small "Search"]]
      [:span.as-item
       (shui/button
-       {:variant :icon
-        :on-click (fn [^js e]
-                    (util/stop e)
-                    (editor-handler/show-quick-add))}
+       (merge
+        {:variant :icon}
+        (hooks/use-long-press
+         {:on-click (fn [^js e]
+                      (util/stop e)
+                      (editor-handler/show-quick-add))
+          :on-long-press (fn [_e]
+                           (state/pub-event! [:mobile/start-audio-record]))
+          :delay 500}))
        (shui/tabler-icon "plus" {:size 24}))
       [:small "Quick add"]]
      [:span.as-item

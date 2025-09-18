@@ -7,6 +7,7 @@
 
 import Capacitor
 import Foundation
+import Speech
 
 func isDarkMode() -> Bool {
   if #available(iOS 12.0, *) {
@@ -204,8 +205,99 @@ public class UILocalPlugin: CAPPlugin, CAPBridgedPlugin {
   private var datepickerDialogView: UIView?
 
   public let pluginMethods: [CAPPluginMethod] = [
-    CAPPluginMethod(name: "showDatePicker", returnType: CAPPluginReturnPromise)
+    CAPPluginMethod(name: "showDatePicker", returnType: CAPPluginReturnPromise),
+    CAPPluginMethod(name: "transcribeAudio2Text", returnType: CAPPluginReturnPromise)
   ]
+
+  func recognizeSpeech(from file: URL, locale: String, completion: @escaping (String?, Error?) -> Void) {
+        if #available(iOS 26.0, *) {
+            // Modern API: SpeechTranscriber + SpeechAnalyzer
+            Task {
+                do {
+                    print("debug locale \(locale)")
+
+                    // Step 1: pick supported locale
+                    guard let supportedLocale = await SpeechTranscriber.supportedLocale(equivalentTo: Locale(identifier: locale)) else {
+                        throw NSError(domain: "Speech", code: -1,
+                                      userInfo: [NSLocalizedDescriptionKey: "Unsupported locale"])
+                    }
+
+                    // Step 2: transcriber with transcription preset
+                    let transcriber = SpeechTranscriber(locale: supportedLocale, preset: .transcription)
+
+                    // Ensure assets (downloads model if needed)
+                    if let installRequest = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
+                        try await installRequest.downloadAndInstall()
+                    }
+
+                    // Step 3: collect transcription results async
+                    async let transcriptionFuture: String = try transcriber.results.reduce(into: "") { partial, result in
+                        partial += String(result.text.characters) + " "
+                    }
+
+                    // Step 4: analyzer
+                    let analyzer = SpeechAnalyzer(modules: [transcriber])
+
+                    // Step 5/6: run analysis from file
+                    let audioFile = try AVAudioFile(forReading: file)
+                    if let lastSample = try await analyzer.analyzeSequence(from: audioFile) {
+                        try await analyzer.finalizeAndFinish(through: lastSample)
+                    } else {
+                        try await analyzer.cancelAndFinishNow()
+                    }
+
+                    // Step 7/8: wait for transcription
+                    let finalText = try await transcriptionFuture.trimmingCharacters(in: .whitespacesAndNewlines)
+                    completion(finalText, nil)
+
+                } catch {
+                    completion(nil, error)
+                }
+            }
+
+        }
+    }
+
+  @objc func transcribeAudio2Text(_ call: CAPPluginCall) {
+    self.call = call
+
+    // audio arrayBuffer
+    guard let audioArray = call.getArray("audioData", NSNumber.self) as? [UInt8] else {
+      call.reject("invalid audioData")
+      return
+    }
+
+    guard let locale = call.getString("locale") else {
+        call.reject("invalid locale")
+        return
+    }
+
+    let audioData = Data(audioArray)
+
+    let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("recordedAudio.m4a")
+
+    do {
+      try audioData.write(to: fileURL)
+
+      let fileExists = FileManager.default.fileExists(atPath: fileURL.path)
+
+      print("file exists: \(fileExists), path: \(fileURL.path)")
+      if !fileExists {
+          call.reject("file save failed: file doesn't exist")
+          return
+      }
+
+      self.recognizeSpeech(from: fileURL, locale: locale) { result, error in
+          if let result = result {
+            call.resolve(["transcription": result])
+          } else if let error = error {
+            call.reject("failed to transcribe: \(error.localizedDescription)")
+          }
+        }
+    } catch {
+      call.reject("failed to transcribe: \(error.localizedDescription)")
+    }
+  }
 
   @objc func showDatePicker(_ call: CAPPluginCall) {
     self.call = call

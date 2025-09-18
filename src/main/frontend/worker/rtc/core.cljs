@@ -16,6 +16,7 @@
             [frontend.worker.rtc.log-and-state :as rtc-log-and-state]
             [frontend.worker.rtc.remote-update :as r.remote-update]
             [frontend.worker.rtc.skeleton]
+            [frontend.worker.rtc.throttle :as r.throttle]
             [frontend.worker.rtc.ws :as ws]
             [frontend.worker.rtc.ws-util :as ws-util :refer [gen-get-ws-create-map--memoized]]
             [frontend.worker.shared-service :as shared-service]
@@ -59,17 +60,6 @@
         (if (identical? x sentinel)
           (recur)
           x)))))
-
-(defn- create-local-updates-check-flow
-  "Return a flow: emit if need to push local-updates"
-  [repo *auto-push? interval-ms]
-  (let [auto-push-flow (m/watch *auto-push?)
-        clock-flow (c.m/clock interval-ms :clock)
-        merge-flow (m/latest vector auto-push-flow clock-flow)]
-    (m/eduction (filter first)
-                (map second)
-                (filter (fn [v] (when (pos? (client-op/get-unpushed-ops-count repo)) v)))
-                merge-flow)))
 
 (defn- create-pull-remote-updates-flow
   "Return a flow: emit to pull remote-updates.
@@ -137,7 +127,7 @@
                              (get-remote-updates get-ws-create-task))
         local-updates-check-flow (m/eduction
                                   (map (fn [data] {:type :local-update-check :value data}))
-                                  (create-local-updates-check-flow repo *auto-push? 2000))
+                                  (r.throttle/create-local-updates-check-flow repo *auto-push? 2000))
         inject-user-info-flow (create-inject-users-info-flow repo (m/watch *online-users))
         mix-flow (c.m/mix remote-updates-flow local-updates-check-flow inject-user-info-flow)]
     (c.m/mix mix-flow (create-pull-remote-updates-flow 60000 mix-flow))))
@@ -219,8 +209,8 @@
         {:keys [*current-ws get-ws-create-task]}
         (gen-get-ws-create-map--memoized ws-url)
         get-ws-create-task (r.client/ensure-register-graph-updates--memoized
-                            get-ws-create-task graph-uuid major-schema-version
-                            repo conn *last-calibrate-t *online-users *server-schema-version add-log-fn)
+                            get-ws-create-task graph-uuid major-schema-version repo conn date-formatter
+                            *last-calibrate-t *online-users *server-schema-version add-log-fn)
         {:keys [assets-sync-loop-task]}
         (r.asset/create-assets-sync-loop repo get-ws-create-task graph-uuid major-schema-version conn *auto-push?)
         mixed-flow                 (create-mixed-flow repo get-ws-create-task *auto-push? *online-users)]
@@ -236,9 +226,9 @@
       (m/sp
         (try
           (log/info :rtc :loop-starting)
+          (started-dfv true)
           ;; init run to open a ws
           (m/? get-ws-create-task)
-          (started-dfv true)
           (update-remote-schema-version! conn @*server-schema-version)
           (reset! *assets-sync-loop-canceler
                   (c.m/run-task :assets-sync-loop-task
@@ -249,9 +239,10 @@
                (:remote-update :remote-asset-block-update)
                (try (r.remote-update/apply-remote-update graph-uuid repo conn date-formatter event add-log-fn)
                     (catch :default e
-                      (when (= ::r.remote-update/need-pull-remote-data (:type (ex-data e)))
+                      (if (= ::r.remote-update/need-pull-remote-data (:type (ex-data e)))
                         (m/? (r.client/new-task--pull-remote-data
-                              repo conn graph-uuid major-schema-version date-formatter get-ws-create-task add-log-fn)))))
+                              repo conn graph-uuid major-schema-version date-formatter get-ws-create-task add-log-fn))
+                        (throw e))))
 
                :local-update-check
                (m/? (r.client/new-task--push-local-ops
