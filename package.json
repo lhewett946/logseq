@@ -154,7 +154,7 @@
         "check-password-strength": "3.0.0",
         "chokidar": "4.0.3",
         "chrono-node": "2.8.4",
-        "codemirror": "5.65.18",
+        "codemirror": "6.0.2",
         "comlink": "^4.4.1",
         "d3-force": "3.0.0",
         "diff": "8.0.2",
