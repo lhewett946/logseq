@@ -3,8 +3,8 @@
   (:require ["@capacitor/app" :refer [^js App]]
             ["@capacitor/keyboard" :refer [^js Keyboard]]
             ["@capacitor/network" :refer [^js Network]]
+            [clojure.string :as string]
             [frontend.handler.editor :as editor-handler]
-            [frontend.mobile.deeplink :as deeplink]
             [frontend.mobile.flows :as mobile-flows]
             [frontend.mobile.intent :as intent]
             [frontend.mobile.util :as mobile-util]
@@ -13,6 +13,7 @@
             [lambdaisland.glogi :as log]
             [logseq.shui.dialog.core :as shui-dialog]
             [mobile.components.ui :as cc-ui]
+            [mobile.deeplink :as deeplink]
             [mobile.state :as mobile-state]
             [promesa.core :as p]))
 
@@ -63,7 +64,10 @@
 (defn- app-state-change-handler
   "NOTE: don't add more logic in this listener, use mobile-flows instead"
   [^js state]
-  (println :debug :app-state-change-handler state (js/Date.))
+  (println :debug :app-state-change-handler state (js/Date.)
+           :current-graph (state/get-current-repo)
+           :app-active? (.-isActive state)
+           :worker-client-id @state/*db-worker-client-id)
   (when (state/get-current-repo)
     (let [is-active? (.-isActive state)]
       (if (not is-active?)
@@ -73,6 +77,7 @@
           (->
            (p/timeout
             (p/let [{:keys [available?]} (state/<invoke-db-worker :thread-api/check-worker-status (state/get-current-repo))]
+              (log/info ::check-worker-state {:available? available?})
               (when-not available?
                 (js/window.location.reload)))
             500)
@@ -91,8 +96,11 @@
                    state/app-ready-promise
                    (fn []
                      (when-let [url (.-url data)]
-                       (when-not (and (= @*last-shared-url url)
-                                      (<= (- (.getSeconds (js/Date.)) @*last-shared-seconds) 1))
+                       (when (or
+                              (string/starts-with? url "https://logseq.com/mobile/")
+                              (string/starts-with? url "logseq://mobile/")
+                              (not (and (= @*last-shared-url url)
+                                        (<= (- (.getSeconds (js/Date.)) @*last-shared-seconds) 1))))
                          (reset! *last-shared-url url)
                          (reset! *last-shared-seconds (.getSeconds (js/Date.)))
                          (deeplink/deeplink url)))))))

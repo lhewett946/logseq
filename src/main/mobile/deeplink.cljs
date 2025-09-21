@@ -1,7 +1,9 @@
-(ns frontend.mobile.deeplink
+(ns mobile.deeplink
+  "Share/open link"
   (:require [clojure.string :as string]
             [frontend.config :as config]
             [frontend.db.async :as db-async]
+            [frontend.handler.editor :as editor-handler]
             [frontend.handler.notification :as notification]
             [frontend.handler.route :as route-handler]
             [frontend.mobile.intent :as intent]
@@ -14,7 +16,8 @@
 (def *link-to-another-graph (atom false))
 
 (defn deeplink [url]
-  (let [^js/Uri parsed-url (.parse Uri url)
+  (let [url (string/replace url "logseq.com/" "")
+        ^js/Uri parsed-url (.parse Uri url)
         hostname (.getDomain parsed-url)
         pathname (.getPath parsed-url)
         search-params (.getQueryData parsed-url)
@@ -28,7 +31,13 @@
                    (remove #(= (:url %) config/demo-repo))
                    (map :url))
         repo-names (map #(get-graph-name-fn %) repos)]
+    (prn :debug :hostname hostname
+         :pathname pathname)
     (cond
+      (and (= hostname "mobile") (= pathname "/go/audio"))
+      (state/pub-event! [:mobile/start-audio-record])
+      (and (= hostname "mobile") (= pathname "/go/quick-add"))
+      (editor-handler/show-quick-add)
       (= hostname "graph")
       (let [graph-name (some-> pathname
                                (string/replace "/" "")

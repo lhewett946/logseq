@@ -149,7 +149,7 @@
         "@tabler/icons-react": "^2.47.0",
         "@tabler/icons-webfont": "^3.34.1",
         "@tippyjs/react": "4.2.6",
-        "@xyhp915/simple-wave-record": "^0.0.3",
+        "@logseq/simple-wave-record": "^0.0.3",
         "bignumber.js": "^9.3.1",
         "check-password-strength": "3.0.0",
         "chokidar": "4.0.3",
