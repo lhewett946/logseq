@@ -226,9 +226,11 @@
       (m/sp
         (try
           (log/info :rtc :loop-starting)
-          (started-dfv true)
           ;; init run to open a ws
           (m/? get-ws-create-task)
+          ;; NOTE: Set dfv after ws connection is established,
+          ;; ensuring the ws connection is already up when the cloud-icon turns green.
+          (started-dfv true)
           (update-remote-schema-version! conn @*server-schema-version)
           (reset! *assets-sync-loop-canceler
                   (c.m/run-task :assets-sync-loop-task
@@ -242,7 +244,7 @@
                       (if (= ::r.remote-update/need-pull-remote-data (:type (ex-data e)))
                         (m/? (r.client/new-task--pull-remote-data
                               repo conn graph-uuid major-schema-version date-formatter get-ws-create-task add-log-fn))
-                        (throw e))))
+                        (throw (r.ex/e->ex-info e)))))
 
                :local-update-check
                (m/? (r.client/new-task--push-local-ops
@@ -261,12 +263,10 @@
            (m/ap)
            (m/reduce {} nil)
            (m/?))
-          (catch Cancelled e
-            (add-log-fn :rtc.log/cancelled {})
-            (throw e))
           (catch :default e
-            (add-log-fn :rtc.log/cancelled {:ex-message (ex-message e) :ex-data (ex-data e)})
-            (throw e))
+            (let [ex (r.ex/e->ex-info e)]
+              (add-log-fn :rtc.log/cancelled {:e ex})
+              (throw ex)))
           (finally
             (started-dfv :final) ;; ensure started-dfv can recv a value(values except the first one will be disregarded)
             (when @*assets-sync-loop-canceler (@*assets-sync-loop-canceler))))))}))
@@ -378,23 +378,28 @@
     (let [repo (worker-state/get-current-repo)
           token (worker-state/get-id-token)
           conn (worker-state/get-datascript-conn repo)]
-      (when (and repo
-                 (sqlite-util/db-based-graph? repo)
-                 token conn)
-        (when stop-before-start? (rtc-stop))
-        (let [ex (m/? (new-task--rtc-start* repo token))]
-          (when-let [ex-data* (ex-data ex)]
-            (case (:type ex-data*)
-              (:rtc.exception/not-rtc-graph
-               :rtc.exception/major-schema-version-mismatched
-               :rtc.exception/lock-failed)
-              (log/info :rtc-start-failed ex)
+      (if-not (and repo
+                   (sqlite-util/db-based-graph? repo)
+                   conn token)
+        (log/info :skip-new-task--rtc-start
+                  {:repo repo
+                   :some?-conn (some? conn)
+                   :some?-token (some? token)})
+        (do
+          (when stop-before-start? (rtc-stop))
+          (let [ex (m/? (new-task--rtc-start* repo token))]
+            (when-let [ex-data* (ex-data ex)]
+              (case (:type ex-data*)
+                (:rtc.exception/not-rtc-graph
+                 :rtc.exception/major-schema-version-mismatched
+                 :rtc.exception/lock-failed)
+                (log/info :rtc-start-failed ex)
 
-              :rtc.exception/not-found-db-conn
-              (log/error :rtc-start-failed ex)
+                :rtc.exception/not-found-db-conn
+                (log/error :rtc-start-failed ex)
 
-              (log/error :BUG-unknown-error ex))
-            (r.ex/->map ex)))))))
+                (log/error :BUG-unknown-error ex))
+              ex)))))))
 
 (defn rtc-stop
   []
@@ -524,7 +529,7 @@
           (ex-info "Not found db-conn" {:type :rtc.exception/not-found-db-conn :repo repo}))]
     (m/sp
       (if (instance? ExceptionInfo r)
-        (r.ex/->map r)
+        r
         (let [major-schema-version (db-schema/major-version schema-version)
               {:keys [get-ws-create-task]} (gen-get-ws-create-map--memoized (ws-util/get-ws-url token))]
           (m/? (r.upload-download/new-task--upload-graph
@@ -542,7 +547,7 @@
           (ex-info "Not found db-conn" {:type :rtc.exception/not-found-db-conn :repo repo}))]
     (m/sp
       (if (instance? ExceptionInfo r)
-        (r.ex/->map r)
+        r
         (let [major-schema-version (db-schema/major-version schema-version)
               {:keys [get-ws-create-task]} (gen-get-ws-create-map--memoized (ws-util/get-ws-url token))]
           (m/? (r.upload-download/new-task--branch-graph

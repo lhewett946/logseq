@@ -25,8 +25,8 @@
   []
   (p/let [persistent? (.persist js/navigator.storage)]
     (if persistent?
-      (js/console.log "Storage will not be cleared unless from explicit user action")
-      (js/console.warn "OPFS storage may be cleared by the browser under storage pressure."))))
+      (log/info :storage-persistent "Storage will not be cleared unless from explicit user action")
+      (log/warn :opfs-storage-may-be-cleared "OPFS storage may be cleared by the browser under storage pressure."))))
 
 (defn- sync-app-state!
   []
@@ -41,6 +41,12 @@
               (constantly nil)
               (m/ap
                 (let [m (m/?> (m/relieve state-flow))]
+                  (when (and (contains? m :git/current-repo)
+                             (nil? (:git/current-repo m)))
+                    (log/error :sync-app-state
+                               [m (select-keys @state/state
+                                               [:git/current-repo
+                                                :auth/id-token :auth/access-token :auth/refresh-token])]))
                   (c.m/<? (state/<invoke-db-worker :thread-api/sync-app-state m))
                   (p/resolve! <init-sync-done?))))]
     (c.m/run-task* task)
@@ -72,6 +78,7 @@
   (let [;; TODO: a better way to share those information with worker, maybe using the state watcher to notify the worker?
         context {:dev? config/dev?
                  :node-test? util/node-test?
+                 :mobile? (util/mobile?)
                  :validate-db-options (:dev/validate-db-options (state/get-config))
                  :importing? (:graph/importing @state/state)
                  :date-formatter (state/get-date-formatter)
@@ -121,7 +128,7 @@
       (reset! state/*db-worker wrapped-worker)
       (-> (p/let [_ (state/<invoke-db-worker :thread-api/init config/RTC-WS-URL)
                   _ (sync-app-state!)
-                  _ (js/console.debug (str "debug: init worker spent: " (- (util/time-ms) t1) "ms"))
+                  _ (log/debug "init worker spent" (str (- (util/time-ms) t1) "ms"))
                   _ (sync-ui-state!)
                   _ (ask-persist-permission!)
                   _ (state/pub-event! [:graph/sync-context])]
@@ -131,11 +138,9 @@
                (db-transact/transact transact!
                                      (if (string? repo) repo (state/get-current-repo))
                                      tx-data
-                                     (assoc tx-meta :client-id (:client-id @state/state)))))
-            (db-transact/listen-for-requests))
+                                     (assoc tx-meta :client-id (:client-id @state/state))))))
           (p/catch (fn [error]
-                     (prn :debug "Can't init SQLite wasm")
-                     (js/console.error error)))))))
+                     (log/error :init-sqlite-wasm-error ["Can't init SQLite wasm" error])))))))
 
 (defn <check-webgpu-available?
   []
@@ -156,7 +161,7 @@
       (p/do!
        (let [embedding-model-name (ldb/get-key-value (db/get-db) :logseq.kv/graph-text-embedding-model-name)]
          (.init wrapped-worker embedding-model-name))
-       (log/info "init infer-worker spent:" (str  (- (util/time-ms) t1) "ms"))))))
+       (log/info "init infer-worker spent:" (str (- (util/time-ms) t1) "ms"))))))
 
 (defn <connect-db-worker-and-infer-worker!
   []
@@ -210,13 +215,11 @@
               data
               (<export-db! repo data))))
         (p/catch (fn [error]
-                   (prn :debug :save-db-error repo)
-                   (js/console.error error)
+                   (log/error :export-db-error repo error "SQLiteDB save error")
                    (notification/show! [:div (str "SQLiteDB save error: " error)] :error) {}))))
 
   (<import-db [_this repo data]
     (-> (state/<invoke-db-worker-direct-pass :thread-api/import-db repo data)
         (p/catch (fn [error]
-                   (prn :debug :import-db-error repo)
-                   (js/console.error error)
+                   (log/error :import-db-error repo error "SQLiteDB import error")
                    (notification/show! [:div (str "SQLiteDB import error: " error)] :error) {})))))

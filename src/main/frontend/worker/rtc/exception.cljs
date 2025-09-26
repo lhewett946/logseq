@@ -1,6 +1,7 @@
 (ns frontend.worker.rtc.exception
   "Exception list"
-  (:require [logseq.common.defkeywords :refer [defkeywords]]))
+  (:require [logseq.common.defkeywords :refer [defkeywords]])
+  (:import [missionary Cancelled]))
 
 (defkeywords
   :rtc.exception/ws-already-disconnected {:doc "Remote exception. current websocket conn is already disconnected and deleted by remote."}
@@ -51,8 +52,9 @@ the server will put it to s3 and return its presigned-url to clients."}
 (def ex-unknown-server-error
   (ex-info "Unknown server error" {:type :rtc.exception/unknown-server-error}))
 
-(defn ->map
+(defn e->ex-info
   [e]
-  (when-let [data (ex-data e)]
-    {:ex-data data
-     :ex-message (ex-message e)}))
+  (cond
+    (instance? Cancelled e) (ex-info "missionary.Cancelled" {:message (.-message e)})
+    (instance? js/CloseEvent e) (ex-info "js/CloseEvent" {:type (.-type e)})
+    :else e))

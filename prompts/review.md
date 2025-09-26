@@ -13,6 +13,13 @@ You're Clojure(script) expert, you're responsible to check those common errors:
 - `util/web-platform?` is a not a function.
 
 - It is recommended to use `lambdaisland.glogi` for printing logs.
+  - Require `[lambdaisland.glogi :as log]` if needed.
   - Replace `js/console.error` with `log/error`.
   - Replace `js/console.warn` with `log/warn`.
   - Replace `js/console.log` with `log/info`.
+  - NOTE: `log/<level>` function takes key-value pairs as arguments
+  
+- After adding a new property in `logseq.db.frontend.property/built-in-properties`, you need to add a corresponding migration in `frontend.worker.db.migrate/schema-version->updates`.
+  - e.g. `["65.9" {:properties [:logseq.property.embedding/hnsw-label-updated-at]}]`
+
+- If common keywords are added or modified, make corresponding changes in their definitions.

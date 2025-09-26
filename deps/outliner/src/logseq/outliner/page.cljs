@@ -1,5 +1,5 @@
-(ns frontend.worker.handler.page.db-based.page
-  "Page operations for DB graphs"
+(ns logseq.outliner.page
+  "Page-related fns for DB graphs"
   (:require [clojure.string :as string]
             [datascript.core :as d]
             [datascript.impl.entity :as de]
@@ -10,6 +10,7 @@
             [logseq.db.common.entity-plus :as entity-plus]
             [logseq.db.common.order :as db-order]
             [logseq.db.frontend.class :as db-class]
+            [logseq.db.frontend.content :as db-content]
             [logseq.db.frontend.entity-util :as entity-util]
             [logseq.db.frontend.malli-schema :as db-malli-schema]
             [logseq.db.frontend.property :as db-property]
@@ -17,6 +18,68 @@
             [logseq.graph-parser.block :as gp-block]
             [logseq.graph-parser.text :as text]
             [logseq.outliner.validate :as outliner-validate]))
+
+(defn- db-refs->page
+  "Replace [[page name]] with page name"
+  [page-entity]
+  (let [refs (:block/_refs page-entity)
+        id-ref->page #(db-content/content-id-ref->page % [page-entity])]
+    (when (seq refs)
+      (let [tx-data (mapcat (fn [{:block/keys [raw-title] :as ref}]
+                                ;; block content
+                              (let [content' (id-ref->page raw-title)
+                                    content-tx (when (not= raw-title content')
+                                                 {:db/id (:db/id ref)
+                                                  :block/title content'})
+                                    tx content-tx]
+                                (concat
+                                 [[:db/retract (:db/id ref) :block/refs (:db/id page-entity)]]
+                                 (when tx [tx])))) refs)]
+        tx-data))))
+
+(defn delete!
+  "Deletes a page. Returns true if able to delete page. If unable to delete,
+  calls error-handler fn and returns false"
+  [conn page-uuid & {:keys [persist-op? rename? error-handler]
+                     :or {persist-op? true
+                          error-handler (fn [{:keys [msg]}] (js/console.error msg))}}]
+  (assert (uuid? page-uuid) (str ::delete! " wrong page-uuid: " (if page-uuid page-uuid "nil")))
+  (when page-uuid
+    (when-let [page (d/entity @conn [:block/uuid page-uuid])]
+      (let [blocks (:block/_page page)
+            truncate-blocks-tx-data (mapv
+                                     (fn [block]
+                                       [:db.fn/retractEntity [:block/uuid (:block/uuid block)]])
+                                     blocks)]
+        ;; TODO: maybe we should add $$$favorites to built-in pages?
+        (if (or (ldb/built-in? page) (ldb/hidden? page))
+          (do
+            (error-handler {:msg "Built-in page cannot be deleted"})
+            false)
+          (let [delete-property-tx (when (ldb/property? page)
+                                     (concat
+                                      (let [datoms (d/datoms @conn :avet (:db/ident page))]
+                                        (map (fn [d] [:db/retract (:e d) (:a d)]) datoms))
+                                      (map (fn [d] [:db/retractEntity (:e d)])
+                                           (d/datoms @conn :avet :logseq.property.history/property (:db/ident page)))))
+                delete-page-tx (concat (db-refs->page page)
+                                       delete-property-tx
+                                       [[:db.fn/retractEntity (:db/id page)]])
+                restore-class-parent-tx (->> (filter ldb/class? (:logseq.property.class/_extends page))
+                                             (map (fn [p]
+                                                    {:db/id (:db/id p)
+                                                     :logseq.property.class/extends :logseq.class/Root})))
+                tx-data (concat truncate-blocks-tx-data
+                                restore-class-parent-tx
+                                delete-page-tx)]
+
+            (ldb/transact! conn tx-data
+                           (cond-> {:outliner-op :delete-page
+                                    :deleted-page (str (:block/uuid page))
+                                    :persist-op? persist-op?}
+                             rename?
+                             (assoc :real-outliner-op :rename-page)))
+            true))))))
 
 (defn- build-page-tx [db properties page {:keys [whiteboard? class? tags]}]
   (when (:block/uuid page)
@@ -66,7 +129,7 @@
                      (db-property-build/build-properties-with-ref-values property-vals-tx-m)))))))
 
 ;; TODO: Revisit title cleanup as this was copied from file implementation
-(defn sanitize-title
+(defn ^:api sanitize-title
   [title]
   (let [title      (-> (string/trim title)
                        (text/page-ref-un-brackets!)
@@ -102,7 +165,7 @@
            :block/parent (or parent (:db/id library))
            :block/order (db-order/gen-key))))
 
-(defn- split-namespace-pages
+(defn- ^:large-vars/cleanup-todo split-namespace-pages
   [db page date-formatter create-class?]
   (let [{:block/keys [title] block-uuid :block/uuid} page]
     (->>
@@ -165,13 +228,13 @@
        [page])
      (remove nil?))))
 
-(defn create
+(defn- ^:large-vars/cleanup-todo create
   "Pure function without side effects"
   [db title*
-   {:keys [tags properties uuid persist-op? whiteboard?
+   {uuid' :uuid
+    :keys [tags properties persist-op? whiteboard?
            class? today-journal? split-namespace?]
     :or   {properties               nil
-           uuid                     nil
            persist-op?              true}
     :as options}]
   (let [date-formatter (:logseq.property.journal/title-format (entity-plus/entity-memoized db :logseq.class/Journal))
@@ -208,12 +271,12 @@
              :title (:block/title existing-page)})))
       (let [page           (gp-block/page-name->map title db true date-formatter
                                                     {:class? class?
-                                                     :page-uuid (when (uuid? uuid) uuid)
+                                                     :page-uuid (when (uuid? uuid') uuid')
                                                      :skip-existing-page-check? true})
-            [page parents] (if (and (text/namespace-page? title) split-namespace?)
-                             (let [pages (split-namespace-pages db page date-formatter class?)]
-                               [(last pages) (butlast pages)])
-                             [page nil])]
+            [page parents'] (if (and (text/namespace-page? title) split-namespace?)
+                              (let [pages (split-namespace-pages db page date-formatter class?)]
+                                [(last pages) (butlast pages)])
+                              [page nil])]
         (when (and page (or (nil? (:db/ident page))
                             ;; New page creation must not override built-in entities
                             (not (db-malli-schema/internal-ident? (:db/ident page)))))
@@ -221,14 +284,14 @@
           (when-not (or (contains? types :logseq.class/Journal)
                         (contains? (set (:block/tags page)) :logseq.class/Journal))
             (outliner-validate/validate-page-title-characters (str (:block/title page)) {:node page})
-            (doseq [parent parents]
+            (doseq [parent parents']
               (outliner-validate/validate-page-title-characters (str (:block/title parent)) {:node parent})))
 
           (let [page-uuid (:block/uuid page)
                 page-txs  (build-page-tx db properties page (select-keys options [:whiteboard? :class? :tags]))
                 txs      (concat
                           ;; transact doesn't support entities
-                          (remove de/entity? parents)
+                          (remove de/entity? parents')
                           page-txs)
                 tx-meta (cond-> {:persist-op? persist-op?
                                  :outliner-op :create-page}

@@ -12,7 +12,7 @@ env:
   JAVA_VERSION: '21'
 
 jobs:
-  build-windows:
+  build-windows-x64:
     name: Windows Build
     runs-on: [windows-latest]
     steps:
@@ -59,4 +59,59 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: logseq-win64-unsigned-builds
+          path: builds
+
+  build-windows-arm64:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+   
+      - name: Install Node.js, NPM and Yarn
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: ${{env.JAVA_VERSION}}
+
+      - name: Set up Clojure
+        uses: DeLaGuardo/setup-clojure@13.4
+        with:
+          cli: ${{env.CLOJURE_VERSION}}
+
+      - name: Deps Electron app
+        run: |
+          yarn install --network-timeout 600000
+          gulp build
+          yarn cljs:release-electron
+          yarn webpack-app-build
+          cd static 
+          yarn install --network-timeout 600000
+
+      - name: Fix Deps Electron app
+        run: yarn run postinstall
+        working-directory: ./static/node_modules/dugite/
+
+      - name: Build/Release Electron app
+        run: yarn electron:make-win-arm64
+        working-directory: ./static
+        env:
+          DEBUG: electron-packager
+
+      - name: Save Artifact
+        run: |
+          mkdir builds
+          mv static\out\make\squirrel.windows\arm64\*.nupkg  builds\Logseq-win-arm64-${{ steps.ref.outputs.version }}-full.nupkg
+          mv static\out\make\zip\win32\arm64\*.exe           builds\Logseq-win-arm64-${{ steps.ref.outputs.version }}.exe
+          mv static\out\make\wix\arm64\Logseq.msi            builds\Logseq-win-arm64-${{ steps.ref.outputs.version }}.msi
+          mv static\out\make\squirrel.windows\arm64\RELEASES builds\RELEASES
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: logseq-win-arm64-builds
           path: builds

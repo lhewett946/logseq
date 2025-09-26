@@ -3,6 +3,7 @@
   (:require ["@capacitor/app" :refer [^js App]]
             ["@capacitor/keyboard" :refer [^js Keyboard]]
             ["@capacitor/network" :refer [^js Network]]
+            ["@capgo/capacitor-navigation-bar" :refer [^js NavigationBar]]
             [clojure.string :as string]
             [frontend.handler.editor :as editor-handler]
             [frontend.mobile.flows :as mobile-flows]
@@ -23,14 +24,16 @@
 (def *last-shared-url (atom nil))
 (def *last-shared-seconds (atom 0))
 
-(defn- ios-init
+(defn- ios-init!
   "Initialize iOS-specified event listeners"
   []
   (mobile-util/check-ios-zoomed-display))
 
-(defn- android-init
+(defn- android-init!
   "Initialize Android-specified event listeners"
   []
+  (js/setTimeout
+   #(.setNavigationBarColor NavigationBar #js {:color "transparent"}) 128)
   (.addListener App "backButton"
                 (fn []
                   (when (false?
@@ -64,29 +67,25 @@
 (defn- app-state-change-handler
   "NOTE: don't add more logic in this listener, use mobile-flows instead"
   [^js state]
-  (println :debug :app-state-change-handler state (js/Date.)
-           :current-graph (state/get-current-repo)
-           :app-active? (.-isActive state)
-           :worker-client-id @state/*db-worker-client-id)
+  (log/info :app-state-change-handler state
+            :app-active? (.-isActive state)
+            :worker-client-id @state/*db-worker-client-id)
   (when (state/get-current-repo)
     (let [is-active? (.-isActive state)]
       (if (not is-active?)
         (editor-handler/save-current-block!)
         ;; check whether db-worker is available
-        (when @state/*db-worker-client-id
-          (->
-           (p/timeout
-            (p/let [{:keys [available?]} (state/<invoke-db-worker :thread-api/check-worker-status (state/get-current-repo))]
-              (log/info ::check-worker-state {:available? available?})
-              (when-not available?
-                (js/window.location.reload)))
-            500)
-           (p/catch (fn [error]
-                      (js/console.error error)
-                      (js/window.location.reload))))))))
+        (when-let [client-id @state/*db-worker-client-id]
+          (when @state/*db-worker
+            (js/navigator.locks.request client-id #js {:mode "exclusive"
+                                                       :ifAvailable true}
+                                        (fn [lock]
+                                          (when lock
+                                            ;; lock acquired, meaning the worker has terminated
+                                            (js/window.location.reload)))))))))
   (reset! mobile-flows/*mobile-app-state (.-isActive state)))
 
-(defn- general-init
+(defn- general-init!
   "Initialize event listeners used by both iOS and Android"
   []
   (.addListener App "appUrlOpen"
@@ -129,13 +128,13 @@
   (reset! mobile-flows/*network Network)
 
   (when (mobile-util/native-android?)
-    (android-init))
+    (android-init!))
 
   (when (mobile-util/native-ios?)
-    (ios-init))
+    (ios-init!))
 
   (when (mobile-util/native-platform?)
-    (general-init)))
+    (general-init!)))
 
 (defn keyboard-hide
   []

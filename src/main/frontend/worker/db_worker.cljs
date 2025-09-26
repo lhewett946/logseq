@@ -143,10 +143,12 @@
   "Upsert addr+data-seq. Update sqlite-cli/upsert-addr-content! when making changes"
   [db data]
   (assert (some? db) "sqlite db not exists")
-  (.transaction db (fn [tx]
-                     (doseq [item data]
-                       (.exec tx #js {:sql "INSERT INTO kvs (addr, content, addresses) values ($addr, $content, $addresses) on conflict(addr) do update set content = $content, addresses = $addresses"
-                                      :bind item})))))
+  (.transaction
+   db
+   (fn [tx]
+     (doseq [item data]
+       (.exec tx #js {:sql "INSERT INTO kvs (addr, content, addresses) values ($addr, $content, $addresses) on conflict(addr) do update set content = $content, addresses = $addresses"
+                      :bind item})))))
 
 (defn restore-data-from-addr
   "Update sqlite-cli/restore-data-from-addr when making changes"
@@ -651,6 +653,9 @@
 
 (def-thread-api :thread-api/sync-app-state
   [new-state]
+  (when (and (contains? new-state :git/current-repo)
+             (nil? (:git/current-repo new-state)))
+    (log/error :thread-api/sync-app-state new-state))
   (worker-state/set-new-state! new-state)
   nil)
 
@@ -768,16 +773,14 @@
   [repo]
   (js/Promise. (embedding/task--update-index-info! repo)))
 
-(def-thread-api :thread-api/check-worker-status
-  [repo]
-  (when repo
-    (let [conn (worker-state/get-datascript-conn repo)]
-      (when @conn
-        {:available? (some? (d/entity @conn :logseq.class/Tag))}))))
-
 (def-thread-api :thread-api/mobile-logs
   []
   @worker-state/*log)
+
+(def-thread-api :thread-api/get-rtc-graph-uuid
+  [repo]
+  (when-let [conn (worker-state/get-datascript-conn repo)]
+    (ldb/get-graph-rtc-uuid @conn)))
 
 (comment
   (def-thread-api :general/dangerousRemoveAllDbs

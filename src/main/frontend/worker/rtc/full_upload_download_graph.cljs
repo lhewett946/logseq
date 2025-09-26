@@ -158,6 +158,7 @@
                             (ldb/kv :logseq.kv/remote-schema-version schema-version)])
             (client-op/update-graph-uuid repo graph-uuid)
             (client-op/remove-local-tx repo)
+            (client-op/update-local-tx repo 1)
             (client-op/add-all-exists-asset-as-ops repo)
             (crypt/store-graph-keys-jwk repo aes-key-jwk)
             (c.m/<? (worker-db-metadata/<store repo (pr-str {:kv/value graph-uuid})))
@@ -360,12 +361,12 @@
   (let [{:keys [remote-t init-tx-data tx-data]}
         (remote-all-blocks->tx-data+t all-blocks graph-uuid)]
     (m/sp
-      (client-op/update-local-tx repo remote-t)
       (rtc-log-and-state/update-local-t graph-uuid remote-t)
       (rtc-log-and-state/update-remote-t graph-uuid remote-t)
       (c.m/<?
        (p/do!
         ((@thread-api/*thread-apis :thread-api/create-or-open-db) repo {:close-other-db? false})
+        (client-op/update-local-tx repo remote-t)
         ((@thread-api/*thread-apis :thread-api/export-db) repo)
         (rtc-log-and-state/rtc-log :rtc.log/download {:sub-type :transact-graph-data-to-db-1
                                                       :message (str "transacting init data(" (count init-tx-data) ")")
