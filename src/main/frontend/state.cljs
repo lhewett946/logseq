@@ -32,7 +32,7 @@
 (defonce *profile-state (volatile! {}))
 
 (defonce *db-worker (atom nil))
-(defonce *db-worker-client-id (atom nil))
+(defonce *db-worker-client-id (atom (storage/get :db-worker-client-id)))
 (defonce *editor-info (atom nil))
 (defonce app-ready-promise (p/deferred))
 
@@ -2368,3 +2368,9 @@ Similar to re-frame subscriptions"
   [days]
   (reset! (:ui/highlight-recent-days @state) days)
   (storage/set :ui/highlight-recent-days days))
+
+(defn set-db-worker-client-id!
+  [new-id]
+  (when new-id
+    (reset! *db-worker-client-id new-id)
+    (storage/set :db-worker-client-id new-id)))
