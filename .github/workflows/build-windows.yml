@@ -62,6 +62,7 @@ jobs:
           path: builds
 
   build-windows-arm64:
+    name: Windows arm64 Build
     runs-on: windows-latest
     steps:
       - name: Checkout
