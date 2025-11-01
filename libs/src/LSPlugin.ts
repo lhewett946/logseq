@@ -77,7 +77,7 @@ export interface LSPluginPkgConfig {
   /**
    * Alternative entrypoint for development.
    */
-  devEntry: unknown
+  devEntry: string
   /**
    * For legacy themes, do not use.
    */
@@ -762,6 +762,7 @@ export interface IEditorProxy extends Record<string, any> {
     opts?: Partial<{
       redirect: boolean
       createFirstBlock: boolean
+      customUUID: string
       format: BlockEntity['format']
       journal: boolean
     }>

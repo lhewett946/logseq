@@ -23,7 +23,7 @@ html.is-native-android {
   --silk-topbar-inner-height: 36px;
   --silk-topbar-inner-padding-bottom: 6px;
 
-  --silk-tabbar-bottom-padding: 28px;
+  --silk-tabbar-bottom-padding: 22px;
 
   .app-silk-index-container {
     padding-top: calc(var(--safe-area-inset-top) + var(--silk-topbar-inner-height) + 22px);
@@ -427,8 +427,8 @@ html[data-silk-native-page-scroll-replaced=false] .app-silk-index-scroll-view {
 }
 
 .app-silk-tabs {
-  @apply flex border-t overflow-hidden select-none
-  bg-gray-02 absolute left-0 -bottom-0 w-full z-[1] dark:bg-gray-01;
+  @apply fixed flex border-t overflow-hidden select-none
+  bg-gray-02 left-0 -bottom-0 w-full z-[1] dark:bg-gray-01;
 
   padding-top: 4px;
   padding-bottom: calc(env(safe-area-inset-bottom) + var(--silk-tabbar-bottom-padding));
