@@ -53,7 +53,7 @@ jobs:
             mv static/out/make/zip/linux/x64/*-linux-x64-*.zip ./builds/Logseq-linux-x64.zip
   
         - name: Upload Artifact
-          uses: actions/upload-artifact@v4
+          uses: actions/upload-artifact@v5
           with:
             name: logseq-linux-x64-builds
             path: builds
@@ -110,7 +110,7 @@ jobs:
             mv static/out/make/zip/linux/arm64/*-linux-arm64-*.zip ./builds/Logseq-linux-arm64.zip
           
         - name: Upload Artifact
-          uses: actions/upload-artifact@v4
+          uses: actions/upload-artifact@v5
           with:
             name: logseq-linux-arm64-builds
             path: builds   

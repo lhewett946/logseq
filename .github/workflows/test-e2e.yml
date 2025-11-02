@@ -65,7 +65,7 @@ jobs:
 
       - name: Collect screenshots
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: e2e-screenshots
           path: clj-e2e/e2e-dump/*
@@ -117,7 +117,7 @@ jobs:
   #
   #    - name: Collect screenshots
   #      if: ${{ failure() }}
-  #      uses: actions/upload-artifact@v4
+  #      uses: actions/upload-artifact@v5
   #      with:
   #        name: e2e-screenshots
   #        path: clj-e2e/e2e-dump/*

@@ -56,7 +56,7 @@ jobs:
           mv static\out\make\wix\x64\Logseq.msi            builds\Logseq-win-x64.msi
             
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: logseq-win64-unsigned-builds
           path: builds
@@ -112,7 +112,7 @@ jobs:
           mv static\out\make\squirrel.windows\arm64\RELEASES builds\RELEASES
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: logseq-win-arm64-builds
           path: builds
