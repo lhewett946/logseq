@@ -106,9 +106,9 @@ jobs:
       - name: Save Artifact
         run: |
           mkdir builds
-          mv static\out\make\squirrel.windows\arm64\*.nupkg  builds\Logseq-win-arm64-${{ steps.ref.outputs.version }}-full.nupkg
-          mv static\out\make\zip\win32\arm64\*.exe           builds\Logseq-win-arm64-${{ steps.ref.outputs.version }}.exe
-          mv static\out\make\wix\arm64\Logseq.msi            builds\Logseq-win-arm64-${{ steps.ref.outputs.version }}.msi
+          mv static\out\make\squirrel.windows\arm64\*.nupkg  builds\Logseq-win-arm64-full.nupkg
+          mv static\out\make\zip\win32\arm64\*.exe           builds\Logseq-win-arm64.exe
+          mv static\out\make\wix\arm64\Logseq.msi            builds\Logseq-win-arm64.msi
           mv static\out\make\squirrel.windows\arm64\RELEASES builds\RELEASES
 
       - name: Upload Artifact
