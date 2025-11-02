@@ -53,7 +53,7 @@ jobs:
           mv static/out/make/zip/darwin/x64/*.zip ./builds/Logseq-darwin-x64.zip
             
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: logseq-darwin-x64-builds
           path: builds
@@ -101,7 +101,7 @@ jobs:
           mv static/out/make/zip/darwin/arm64/*.zip ./builds/Logseq-darwin-arm64.zip
             
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: logseq-darwin-arm64-builds
           path: builds
