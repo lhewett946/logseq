@@ -1,6 +1,6 @@
 (ns frontend.common.search-fuzzy
   "fuzzy search. Used by frontend and worker namespaces"
-  (:require ["remove-accents" :as removeAccents]
+  (:require ["remove-accents/index.js" :default removeAccents]
             [cljs-bean.core :as bean]
             [clojure.string :as string]))
 
@@ -28,13 +28,20 @@
                (/ (- maxed mined)
                   maxed)))))
 
+(defn- call-remove-accents [s]
+  (let [f (cond
+            (fn? removeAccents) removeAccents
+            (and (some? removeAccents) (fn? (.-default removeAccents))) (.-default removeAccents)
+            :else nil)]
+    (if f (f s) s)))
+
 (defn search-normalize
   "Normalize string for searching (loose)"
   [s remove-accents?]
   (when s
     (let [normalize-str (.normalize (string/lower-case s) "NFKC")]
       (if remove-accents?
-        (removeAccents normalize-str)
+        (call-remove-accents normalize-str)
         normalize-str))))
 
 (defn score
