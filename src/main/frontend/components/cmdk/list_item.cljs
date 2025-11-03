@@ -1,6 +1,6 @@
 (ns frontend.components.cmdk.list-item
   (:require
-   ["remove-accents" :as remove-accents]
+   ["remove-accents/index.js" :default removeAccents]
    [clojure.string :as string]
    [goog.string :as gstring]
    [logseq.shui.hooks :as hooks]
@@ -18,10 +18,10 @@
     :else (pr-str input)))
 
 (defn- normalize-text [app-config text]
-  (cond-> (to-string text)
-    ;; :lower-case (string/lower-case)
-    :normalize (.normalize "NFKC")
-    (:feature/enable-search-remove-accents? app-config) (remove-accents)))
+  (let [s (to-string text)]
+    (if (:feature/enable-search-remove-accents? app-config)
+      (if (fn? removeAccents) (removeAccents s) s)
+      s)))
 
 (defn highlight-query* [app-config query text]
   (cond

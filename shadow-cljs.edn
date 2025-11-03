@@ -19,7 +19,9 @@
                                   "react-dom" {:target :global
                                                :global "ReactDOM"}
                                   "@excalidraw/excalidraw" {:target :global, 
-                                                            :global "Excalidraw"}}} ;; handle `require(xxx.css)`
+                                                            :global "Excalidraw"}
+                                  "remove-accents" {:target :npm
+                                                    :require "remove-accents/index.js"}}} ;; handle `require(xxx.css)`
         :modules       {:main
                         {:init-fn frontend.core/init}
                         :code-editor
@@ -67,7 +69,9 @@
                               :external-index "target/db-worker.js"
                               :external-index-format :esm
                               :entry-keys ["module" "browser" "main"]
-                              :export-conditions ["module" "import", "browser" "require" "default"]}
+                              :export-conditions ["module" "import", "browser" "require" "default"]
+                              :resolve {"remove-accents" {:target :npm
+                                                    :require "remove-accents/index.js"}}}
               :modules       {:db-worker
                               {:init-fn frontend.worker.db-worker/init
                                :web-worker true
