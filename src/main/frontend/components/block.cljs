@@ -2012,7 +2012,11 @@
     ["Tag" _]
     (when-let [s (gp-block/get-tag item)]
       (let [s (text/page-ref-un-brackets! s)]
-        (page-cp (assoc config :tag? true) {:block/name s})))
+        (if (config/db-based-graph?)
+          (if (common-util/uuid-string? s)
+            (page-cp (assoc config :tag? true) {:block/name s})
+            [:span (str "#" s)])
+          (page-cp (assoc config :tag? true) {:block/name s}))))
 
     ["Emphasis" [[kind] data]]
     (emphasis-cp config kind data)
@@ -2374,7 +2378,7 @@
                      :color (when-not built-in-color? "white")}
              :class "px-1 with-bg-color"})))
 
-     ;; children
+       ;; children
        (let [area?  (= :area (keyword (pu/lookup block :logseq.property.pdf/hl-type)))
              hl-ref #(when (not (#{:default :whiteboard-shape} block-type))
                        [:div.prefix-link

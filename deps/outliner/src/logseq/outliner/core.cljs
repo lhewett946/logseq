@@ -237,10 +237,27 @@
           [:db/retract eid :block/tags :logseq.class/Page]])))
    tags))
 
-(defn- remove-inline-page-classes
+(defn- inline-tag-disallowed?
+  [db t]
+  ;; both disallowed tags and built-in pages shouldn't be used as inline tags
+  (let [disallowed-idents (into db-class/disallowed-inline-tags
+                                #{:logseq.property/query :logseq.property/asset})]
+    (and (map? t)
+         (or
+          (contains?
+           disallowed-idents
+           (or (:db/ident t)
+               (when-let [id (:block/uuid t)]
+                 (:db/ident (d/entity db [:block/uuid id])))))
+          (contains?
+           sqlite-create-graph/built-in-pages-names
+           (or (:block/title t)
+               (when-let [id (:block/uuid t)]
+                 (:block/title (d/entity db [:block/uuid id])))))))))
+
+(defn- remove-disallowed-inline-classes
   [db {:block/keys [tags] :as block}]
-  ;; Notice: should check `page?` for block from the current db
-  (if (ldb/page? (d/entity db (:db/id block)))
+  (if (or (ldb/page? (d/entity db (:db/id block))) (:block/name block))
     block
     (let [tags' (cond
                   (or (integer? tags)
@@ -253,28 +270,26 @@
                   :else
                   tags)
           block (assoc block :block/tags tags')
-          page-class? (fn [t]
-                        (and (map? t) (contains? db-class/page-classes
-                                                 (or (:db/ident t)
-                                                     (when-let [id (:block/uuid t)]
-                                                       (:db/ident (d/entity db [:block/uuid id])))))))
-          page-classes (filter page-class? tags')]
-      (if (seq page-classes)
+          disallowed-tag? (fn [tag] (inline-tag-disallowed? db tag))
+          disallowed-tags (filter disallowed-tag? tags')]
+      (if (seq disallowed-tags)
         (-> block
             (update :block/tags
                     (fn [tags]
-                      (->> (remove page-class? tags)
+                      (->> (remove disallowed-tag? tags)
                            (remove nil?))))
             (update :block/refs
-                    (fn [refs] (->> (remove page-class? refs)
+                    (fn [refs] (->> (remove disallowed-tag? refs)
                                     (remove nil?))))
             (update :block/title (fn [title]
                                    (reduce
-                                    (fn [title page-class]
-                                      (-> (string/replace title (str "#" (page-ref/->page-ref (:block/uuid page-class))) "")
+                                    (fn [title tag]
+                                      (-> (string/replace title
+                                                          (str "#" (page-ref/->page-ref (:block/uuid tag)))
+                                                          (str "#" (:block/title tag)))
                                           string/trim))
                                     title
-                                    page-classes))))
+                                    disallowed-tags))))
         block))))
 
 (extend-type Entity
@@ -284,15 +299,13 @@
     (assert (ds/outliner-txs-state? *txs-state)
             "db should be satisfied outliner-tx-state?")
     (let [db-based? (sqlite-util/db-based-graph? repo)
-          data (cond->> this
-                 db-based?
-                 (remove-inline-page-classes db))
-          data' (cond->
-                 (if (de/entity? data)
-                   (assoc (.-kv ^js data) :db/id (:db/id data))
-                   data)
-                  db-based?
-                  (dissoc :block/properties))
+          data (if (de/entity? this)
+                 (assoc (.-kv ^js this) :db/id (:db/id this))
+                 this)
+          data' (if db-based?
+                  (->> (dissoc data :block/properties)
+                       (remove-disallowed-inline-classes db))
+                  data)
           collapse-or-expand? (= outliner-op :collapse-expand-blocks)
           m* (cond->
               (-> data'
@@ -327,11 +340,6 @@
                        (:block/title m*)
                        (not= (:block/title m*) (:block/title block-entity)))
               (outliner-validate/validate-block-title db (:block/title m*) block-entity))
-          _ (when (and db-based? (seq (:block/tags m*)))
-                        ;; Add built-in? b/c it's not available here
-              (doseq [tag (map #(assoc % :logseq.property/built-in?
-                                       (contains? sqlite-create-graph/built-in-pages-names (:block/title %))) (:block/tags m*))]
-                (outliner-validate/validate-built-in-pages tag {:message "Built-in page can't be a tag"})))
           m (cond-> m*
               db-based?
               (dissoc :block/format :block/pre-block? :block/priority :block/marker :block/properties-order))]
@@ -593,7 +601,7 @@
         orders (get-block-orders blocks target-block sibling? keep-block-order?)]
     (map-indexed (fn [idx {:block/keys [parent] :as block}]
                    (when-let [uuid' (get uuids (:block/uuid block))]
-                     (let [block (if db-based? (remove-inline-page-classes db block) block)
+                     (let [block (if db-based? (remove-disallowed-inline-classes db block) block)
                            top-level? (= (:block/level block) 1)
                            parent (compute-block-parent block parent target-block top-level? sibling? get-new-id outliner-op replace-empty-target? idx)
 
@@ -922,10 +930,8 @@
   (let [target-block (d/entity db (:db/id target-block))
         block (d/entity db (:db/id block))]
     (if (or
-         ;; target-block doesn't have parent or moving non-page block to library
-         (and sibling? (or (nil? (:block/parent target-block))
-                           (and (not (ldb/page? block))
-                                (ldb/library? (:block/parent target-block)))))
+         ;; target-block doesn't have parent
+         (and sibling? (nil? (:block/parent target-block)))
          ;; move page to be a child of block
          (and (not sibling?)
               (not (ldb/page? target-block))

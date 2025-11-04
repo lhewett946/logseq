@@ -129,7 +129,8 @@
               ;; notify ui
               (when-let [f @*transact-invalid-callback]
                 (f tx-report errors))
-              (throw (ex-info "DB write failed with invalid data" {:tx-data tx-data}))))
+              (throw (ex-info "DB write failed with invalid data" {:tx-data tx-data
+                                                                   :pipeline-tx-data (:tx-data tx-report)}))))
           tx-report)
         (d/transact! conn tx-data tx-meta)))
     (catch :default e
@@ -185,6 +186,7 @@
 (def get-entity-types entity-util/get-entity-types)
 (def internal-tags db-class/internal-tags)
 (def private-tags db-class/private-tags)
+(def extends-hidden-tags db-class/extends-hidden-tags)
 (def hidden-tags db-class/hidden-tags)
 
 (defn sort-by-order
