@@ -6,6 +6,7 @@
             [frontend.worker.db.migrate :as db-migrate]
             [frontend.worker.shared-service :as shared-service]
             [logseq.db :as ldb]
+            [logseq.db.frontend.class :as db-class]
             [logseq.db.frontend.validate :as db-validate]))
 
 (defn- get-property-by-title
@@ -21,6 +22,15 @@
                      (fn [{:keys [entity dispatch-key]}]
                        (let [entity (d/entity db (:db/id entity))]
                          (cond
+                           ;; missing :db/ident
+                           (and (ldb/class? entity) (nil? (:db/ident entity)) (:block/title entity))
+                           [[:db/add (:db/id entity) :db/ident (db-class/create-user-class-ident-from-name db (:block/title entity))]]
+                           (and
+                            (= (:block/title (:logseq.property/created-from-property entity)) "description")
+                            (nil? (:block/page entity)))
+                           (let [property-id (:db/id (:logseq.property/created-from-property entity))]
+                             [[:db/add (:db/id entity) :block/page property-id]
+                              [:db/add (:db/id entity) :block/parent property-id]])
                            (and (:db/ident entity)
                                 (:logseq.property/built-in? entity)
                                 (:block/parent entity))
@@ -168,7 +178,8 @@
                                  (:db/ident property))]
                      (keep
                       (fn [[b v]]
-                        (when-not (matches v)
+                        (when-not (or (matches v)
+                                      (= :logseq.property/empty-placeholder (:db/ident (d/entity db v))))
                           [:db/retract b (:db/ident  property) v]))
                       values)))
                  properties)]
@@ -176,8 +187,19 @@
       (prn :debug :fix-non-closed-values tx-data)
       (d/transact! conn tx-data {:fix-db? true}))))
 
+(defn- fix-icon-wrong-type!
+  [conn]
+  (let [icon (d/entity @conn :logseq.property/icon)]
+    (when (= :db.type/ref (:db/valueType icon))
+      (let [datoms (d/datoms @conn :avet :logseq.property/icon)
+            tx-data (cons
+                     [:db/retract (:db/id icon) :db/valueType]
+                     (map (fn [d] [:db/retract (:e d) (:a d)]) datoms))]
+        (d/transact! conn tx-data {:fix-db? true})))))
+
 (defn validate-db
   [conn]
+  (fix-icon-wrong-type! conn)
   (db-migrate/ensure-built-in-data-exists! conn)
   (fix-non-closed-values! conn)
   (fix-num-prefix-db-idents! conn)

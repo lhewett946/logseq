@@ -91,6 +91,7 @@
 (def ^:export custom_query api-db/custom_query)
 
 ;; editor
+(def ^:export prepend_block_in_page api-editor/prepend_block_in_page)
 (def ^:export append_block_in_page api-editor/append_block_in_page)
 (def ^:export check_editing api-editor/check_editing)
 (def ^:export clear_selected_blocks api-editor/clear_selected_blocks)
@@ -124,7 +125,6 @@
 (def ^:export move_block api-editor/move_block)
 (def ^:export new_block_uuid api-editor/new_block_uuid)
 (def ^:export open_in_right_sidebar api-editor/open_in_right_sidebar)
-(def ^:export prepend_block_in_page api-editor/prepend_block_in_page)
 (def ^:export remove_block api-editor/remove_block)
 (def ^:export remove_block_property api-editor/remove_block_property)
 (def ^:export rename_page api-editor/rename_page)
@@ -200,6 +200,11 @@
 (def ^:export get_all_tags db-based-api/get-all-tags)
 (def ^:export get_all_properties db-based-api/get-all-properties)
 (def ^:export get_tag_objects db-based-api/get-tag-objects)
+(def ^:export create_tag db-based-api/create-tag)
+(def ^:export add_block_tag db-based-api/add-block-tag)
+(def ^:export remove_block_tag db-based-api/remove-block-tag)
+(def ^:export add_tag_property db-based-api/tag-add-property)
+(def ^:export remove_tag_property db-based-api/tag-remove-property)
 
 ;; Internal db-based CLI APIs
 (def ^:export list_tags cli-based-api/list-tags)
@@ -207,6 +212,7 @@
 (def ^:export list_pages cli-based-api/list-pages)
 (def ^:export get_page_data cli-based-api/get-page-data)
 (def ^:export upsert_nodes cli-based-api/upsert-nodes)
+(def ^:export import_edn cli-based-api/import-edn)
 
 ;; file based graph APIs
 (def ^:export get_current_graph_templates file-based-api/get_current_graph_templates)

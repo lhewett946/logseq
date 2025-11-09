@@ -430,7 +430,9 @@
    ["65.9" {:properties [:logseq.property.embedding/hnsw-label-updated-at]}]
    ["65.10" {:properties [:block/journal-day :logseq.property.view/sort-groups-by-property :logseq.property.view/sort-groups-desc?]}]
    ["65.11" {:fix remove-block-path-refs}]
-   ["65.12" {:fix remove-position-property-from-url-properties}]])
+   ["65.12" {:fix remove-position-property-from-url-properties}]
+   ["65.13" {:properties [:logseq.property.asset/width
+                          :logseq.property.asset/height]}]])
 
 (let [[major minor] (last (sort (map (comp (juxt :major :minor) db-schema/parse-schema-version first)
                                      schema-version->updates)))]
@@ -549,7 +551,8 @@
         tx-data' (concat
                   [(sqlite-util/kv :logseq.kv/schema-version version)]
                   tx-data)
-        r (ldb/transact! conn tx-data' {:db-migrate? true})
+        r (ldb/transact! conn tx-data' {:db-migrate? true
+                                        :skip-validate-db? true})
         migrate-updates (cond-> migrate-updates
                           rename-db-idents (assoc :rename-db-idents rename-db-idents-coll))]
     (println "DB schema migrated to" version)

@@ -6,8 +6,10 @@
             [clojure.walk :as walk]
             [datascript.core :as d]
             [frontend.db :as db]
+            [frontend.db.async :as db-async]
             [frontend.db.model :as db-model]
             [frontend.handler.common.page :as page-common-handler]
+            [frontend.handler.db-based.page :as db-page-handler]
             [frontend.handler.db-based.property :as db-property-handler]
             [frontend.handler.editor :as editor-handler]
             [frontend.handler.page :as page-handler]
@@ -83,7 +85,8 @@
        (when (seq (:properties opts))
          (api-block/db-based-save-block-properties! block (:properties opts)
                                                     {:plugin this
-                                                     :schema (:schema opts)}))
+                                                     :schema (:schema opts)
+                                                     :reset-property-values (:reset-property-values opts)}))
        (editor-handler/save-block! repo
                                    (sdk-utils/uuid-or-throw-error block-uuid) content
                                    (dissoc opts :properties))))))
@@ -113,6 +116,29 @@
     (when-not (contains? valid-types type)
       (throw (ex-info (str "Invalid type, type should be one of: " valid-types) {:type type})))))
 
+(defn- upsert-property-aux
+  [this k schema opts]
+  (p/let [k' (api-block/sanitize-user-property-name k)
+          property-ident (api-block/get-db-ident-from-property-name k' this)
+          _ (api-block/ensure-property-upsert-control this property-ident k')
+          schema (or (some-> schema
+                             (update-keys #(if (contains? #{:hide :public} %)
+                                             (keyword (str (name %) "?")) %)))
+                     {})
+          _ (when (:type schema)
+              (schema-type-check! (keyword (:type schema))))
+          schema (cond-> schema
+                   (string? (:cardinality schema))
+                   (-> (assoc :db/cardinality (->cardinality (:cardinality schema)))
+                       (dissoc :cardinality))
+
+                   (string? (:type schema))
+                   (-> (assoc :logseq.property/type (keyword (:type schema)))
+                       (dissoc :type)))
+          p (db-property-handler/upsert-property! property-ident schema
+                                                  (assoc opts :property-name k'))]
+    (db/entity (:db/id p))))
+
 (defn upsert-property
   "schema:
     {:type :default | :number | :date | :datetime | :checkbox | :url | :node | :json | :string
@@ -125,27 +151,10 @@
   (this-as
    this
    (when-not (string/blank? k)
-     (p/let [opts (or (some-> opts bean/->clj) {})
-             k' (api-block/sanitize-user-property-name k)
-             property-ident (api-block/get-db-ident-from-property-name k' this)
-             _ (api-block/ensure-property-upsert-control this property-ident k')
-             schema (or (some-> schema (bean/->clj)
-                                (update-keys #(if (contains? #{:hide :public} %)
-                                                (keyword (str (name %) "?")) %))) {})
-             _ (when (:type schema)
-                 (schema-type-check! (keyword (:type schema))))
-             schema (cond-> schema
-                      (string? (:cardinality schema))
-                      (-> (assoc :db/cardinality (->cardinality (:cardinality schema)))
-                          (dissoc :cardinality))
-
-                      (string? (:type schema))
-                      (-> (assoc :logseq.property/type (keyword (:type schema)))
-                          (dissoc :type)))
-             p (db-property-handler/upsert-property! property-ident schema
-                                                     (assoc opts :property-name k'))
-             p (db/entity (:db/id p))]
-       (sdk-utils/result->js p)))))
+     (p/let [opts' (or (some-> opts bean/->clj) {})
+             schema' (or (some-> schema bean/->clj) {})
+             property (upsert-property-aux this k schema' opts')]
+       (sdk-utils/result->js property)))))
 
 (defn remove-property
   [k]
@@ -157,10 +166,11 @@
        (page-common-handler/<delete! uuid nil nil)))))
 
 (defn upsert-block-property
-  [this block key' value schema]
+  [this block key' value {:keys [schema reset-property-values]}]
   (let [opts {:plugin this
               :schema (when schema
-                        {key schema})}]
+                        {key schema})
+              :reset-property-values reset-property-values}]
     (api-block/db-based-save-block-properties! block {key' value} opts)))
 
 (defn get-all-tags
@@ -192,3 +202,51 @@
                                               (state/get-current-repo)
                                               (:db/id class))]
         (sdk-utils/result->js result)))))
+
+(defn create-tag [title ^js opts]
+  (let [opts (bean/->clj opts)]
+    (p/let [repo (state/get-current-repo)
+            tag (db-page-handler/<create-class!
+                 title
+                 (-> opts
+                     (sdk-utils/with-custom-uuid)
+                     (assoc :redirect? false)))
+            tag (db-async/<get-block repo (:db/id tag) {:children? false})]
+      (when tag
+        (sdk-utils/result->js tag)))))
+
+(defn tag-add-property [tag-id property-id-or-name]
+  (p/let [tag (db/get-case-page tag-id)
+          property (db/get-case-page property-id-or-name)]
+    (when-not (ldb/class? tag) (throw (ex-info "Not a valid tag" {:tag tag-id})))
+    (when-not (ldb/property? property) (throw (ex-info "Not a valid property" {:property property-id-or-name})))
+    (when (and (not (ldb/public-built-in-property? property))
+               (ldb/built-in? property))
+      (throw (ex-info "This is a private built-in property that can't be used." {:value property})))
+    (p/do!
+     (db-property-handler/class-add-property! (:db/id tag) (:db/ident property))
+     (sdk-utils/result->js (db/get-case-page tag-id)))))
+
+(defn tag-remove-property [tag-id property-id-or-name]
+  (p/let [tag (db/get-case-page tag-id)
+          property (db/get-case-page property-id-or-name)]
+    (when-not (ldb/class? tag) (throw (ex-info "Not a valid tag" {:tag tag-id})))
+    (when-not (ldb/property? property) (throw (ex-info "Not a valid property" {:property property-id-or-name})))
+    (p/do!
+     (db-property-handler/class-remove-property! (:db/id tag) (:db/ident property))
+     (sdk-utils/result->js (db/get-case-page tag-id)))))
+
+(defn add-block-tag [id-or-name tag-id]
+  (p/let [repo (state/get-current-repo)
+          tag (db-async/<get-block repo tag-id)
+          block (db-async/<get-block repo id-or-name)]
+    (when (and tag block)
+      (db-page-handler/add-tag repo (:db/id block) tag))))
+
+(defn remove-block-tag [id-or-name tag-id]
+  (p/let [repo (state/get-current-repo)
+          block (db-async/<get-block repo id-or-name)
+          tag (db-async/<get-block repo tag-id)]
+    (when (and block tag)
+      (db-property-handler/delete-property-value!
+       (:db/id block) :block/tags (:db/id tag)))))

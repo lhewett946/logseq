@@ -213,7 +213,8 @@
                            (when (and (:block/uuid block') (or (:block/parent block') (not (:page? block))))
                              (when-let [breadcrumb (state/get-component :block/breadcrumb)]
                                [:div.text-xs.opacity-70.mb-1 {:style {:margin-left 3}}
-                                (breadcrumb {:search? true} (state/get-current-repo) (:block/uuid block') {})]))
+                                (breadcrumb {:search? true} (state/get-current-repo) (:block/uuid block')
+                                            {:disabled? true})]))
                            [:div.flex.flex-row.items-start
                             (when-not (or db-tag? (not db-based?))
                               [:div.flex.items-center.h-5.mr-1.opacity-50
@@ -328,8 +329,7 @@
                  state)}
   [state _edit-block input id q format selected-text]
   (let [result (->> (rum/react (get state ::result))
-                    (remove (fn [b] (or (nil? (:block/uuid b))
-                                        (string/blank? (:block/title (db-model/query-block-by-uuid (:block/uuid b))))))))
+                    (remove (fn [b] (nil? (:block/uuid b)))))
         db? (config/db-based-graph? (state/get-current-repo))
         embed? (and db? (= @commands/*current-command "Block embed"))
         chosen-handler (block-on-chosen-handler embed? input id q format selected-text)
@@ -339,14 +339,12 @@
      {:on-chosen   chosen-handler
       :on-enter    non-exist-block-handler
       :empty-placeholder   [:div.text-gray-500.text-sm.px-4.py-2 (t :editor/block-search)]
-      :item-render (fn [{:block/keys [page uuid]}]  ;; content returned from search engine is normalized
+      :item-render (fn [{:block/keys [page uuid title]}]
                      (let [page-entity (db/entity [:block/uuid page])
                            repo (state/sub :git/current-repo)
-                           format (get page-entity :block/format :markdown)
-                           block (db-model/get-block-by-uuid uuid)
-                           content (:block/title block)]
-                       (when-not (string/blank? content)
-                         [:.py-2 (search/block-search-result-item repo uuid format content q :block)])))
+                           format (get page-entity :block/format :markdown)]
+                       (when-not (string/blank? title)
+                         [:.py-2 (search/block-search-result-item repo uuid format title q :block)])))
       :class       "ac-block-search"})))
 
 (rum/defcs block-search < rum/reactive

@@ -34,7 +34,6 @@
             [frontend.extensions.latex :as latex]
             [frontend.extensions.lightbox :as lightbox]
             [frontend.extensions.pdf.assets :as pdf-assets]
-            [frontend.extensions.pdf.utils :as pdf-utils]
             [frontend.extensions.sci :as sci]
             [frontend.extensions.video.youtube :as youtube]
             [frontend.extensions.zotero :as zotero]
@@ -52,6 +51,7 @@
             [frontend.handler.file-sync :as file-sync]
             [frontend.handler.notification :as notification]
             [frontend.handler.plugin :as plugin-handler]
+            [frontend.handler.property :as property-handler]
             [frontend.handler.property.file :as property-file]
             [frontend.handler.property.util :as pu]
             [frontend.handler.route :as route-handler]
@@ -84,7 +84,6 @@
             [logseq.common.util.page-ref :as page-ref]
             [logseq.db :as ldb]
             [logseq.db.common.entity-plus :as entity-plus]
-            [logseq.db.frontend.content :as db-content]
             [logseq.graph-parser.block :as gp-block]
             [logseq.graph-parser.mldoc :as gp-mldoc]
             [logseq.graph-parser.text :as text]
@@ -303,106 +302,127 @@
      [:span.handle-left.image-resize (assoc handle-props :ref *handle-left)]
      [:span.handle-right.image-resize (assoc handle-props :ref *handle-right)]]))
 
+(defn measure-image! [url on-dimensions]
+  (let [img (js/Image.)]
+    (set! (.-onload img)
+          (fn []
+            (on-dimensions (.-naturalWidth img) (.-naturalHeight img))))
+    (set! (.-src img) url)))
+
 (defonce *resizing-image? (atom false))
-(rum/defc asset-container
+(rum/defc ^:large-vars/cleanup-todo asset-container
   [asset-block src title metadata {:keys [breadcrumb? positioned? local? full-text]}]
-  (let [*el-ref (rum/use-ref nil)
-        image-src (fs/asset-path-normalize src)
-        src' (if (or (string/starts-with? src "/")
-                     (string/starts-with? src "~"))
-               (str "file://" src)
-               src)
-        get-blockid #(some-> (rum/deref *el-ref) (.closest "[blockid]") (.getAttribute "blockid") (uuid))]
-    [:div.asset-container
-     {:key "resize-asset-container"
-      :on-pointer-down util/stop
-      :on-click (fn [e]
-                  (util/stop e)
-                  (when (= "IMG" (some-> (.-target e) (.-nodeName)))
-                    (open-lightbox! e)))
-      :ref *el-ref}
-     [:img.rounded-sm.relative
-      (merge
-       {:loading "lazy"
-        :referrerPolicy "no-referrer"
-        :src src'
-        :title title}
-       metadata)]
-     (when (and (not breadcrumb?)
-                (not positioned?))
-       [:<>
-        (let [handle-copy!
-              (fn [_e]
-                (-> (util/copy-image-to-clipboard image-src)
-                    (p/then #(notification/show! "Copied!" :success))))
-              handle-delete!
-              (fn [_e]
-                (when-let [block-id (get-blockid)]
-                  (let [*local-selected? (atom local?)]
-                    (-> (shui/dialog-confirm!
-                         [:div.text-xs.opacity-60.-my-2
-                          (when (and local? (not= (:block/uuid asset-block) block-id))
-                            [:label.flex.gap-1.items-center
-                             (shui/checkbox
-                              {:default-checked @*local-selected?
-                               :on-checked-change #(reset! *local-selected? %)})
-                             (t :asset/physical-delete)])]
-                         {:title (t :asset/confirm-delete (.toLocaleLowerCase (t :text/image)))
-                          :outside-cancel? true})
-                        (p/then (fn []
-                                  (shui/dialog-close!)
-                                  (editor-handler/delete-asset-of-block!
-                                   {:block-id block-id
-                                    :asset-block asset-block
-                                    :local? local?
-                                    :delete-local? @*local-selected?
-                                    :repo (state/get-current-repo)
-                                    :href src
-                                    :title title
-                                    :full-text full-text})))))))]
-          [:.asset-action-bar {:aria-hidden "true"}
-           (shui/button-group
-            (shui/button
-             {:variant :outline
-              :size :icon
-              :class "h-7 w-7"
-              :on-pointer-down util/stop
-              :on-click (fn [e]
-                          (shui/popup-show! (.closest (.-target e) ".asset-action-bar")
-                                            (fn []
-                                              [:div
-                                               {:on-click #(shui/popup-hide!)}
-                                               (shui/dropdown-menu-item
-                                                {:on-click #(some-> (db/entity [:block/uuid (get-blockid)])
-                                                                    (editor-handler/edit-block! :max {:container-id :unknown-container}))}
-                                                [:span.flex.items-center.gap-1
-                                                 (ui/icon "edit") (t :asset/edit-block)])
-                                               (shui/dropdown-menu-item
-                                                {:on-click handle-copy!}
-                                                [:span.flex.items-center.gap-1
-                                                 (ui/icon "copy") (t :asset/copy)])
-                                               (when (util/electron?)
+  (let [asset-width (:logseq.property.asset/width asset-block)
+        asset-height (:logseq.property.asset/height asset-block)]
+    (hooks/use-effect!
+     (fn []
+       (when-not (or asset-width asset-height)
+         (measure-image!
+          src
+          (fn [width height]
+            (when (nil? (:logseq.property.asset/width asset-block))
+              (property-handler/set-block-properties! (state/get-current-repo)
+                                                      (:block/uuid asset-block)
+                                                      {:logseq.property.asset/width width
+                                                       :logseq.property.asset/height height})))))
+       (fn []))
+     [])
+    (let [*el-ref (rum/use-ref nil)
+          image-src (fs/asset-path-normalize src)
+          src' (if (or (string/starts-with? src "/")
+                       (string/starts-with? src "~"))
+                 (str "file://" src)
+                 src)
+          get-blockid #(some-> (rum/deref *el-ref) (.closest "[blockid]") (.getAttribute "blockid") (uuid))]
+      [:div.asset-container
+       {:key "resize-asset-container"
+        :on-pointer-down util/stop
+        :on-click (fn [e]
+                    (util/stop e)
+                    (when (= "IMG" (some-> (.-target e) (.-nodeName)))
+                      (open-lightbox! e)))
+        :ref *el-ref}
+       [:img.rounded-sm.relative.fade-in.fade-in-faster
+        (merge
+         {:loading "lazy"
+          :referrerPolicy "no-referrer"
+          :src src'
+          :title title}
+         metadata)]
+       (when (and (not breadcrumb?)
+                  (not positioned?))
+         [:<>
+          (let [handle-copy!
+                (fn [_e]
+                  (-> (util/copy-image-to-clipboard image-src)
+                      (p/then #(notification/show! "Copied!" :success))))
+                handle-delete!
+                (fn [_e]
+                  (when-let [block-id (get-blockid)]
+                    (let [*local-selected? (atom local?)]
+                      (-> (shui/dialog-confirm!
+                           [:div.text-xs.opacity-60.-my-2
+                            (when (and local? (not= (:block/uuid asset-block) block-id))
+                              [:label.flex.gap-1.items-center
+                               (shui/checkbox
+                                {:default-checked @*local-selected?
+                                 :on-checked-change #(reset! *local-selected? %)})
+                               (t :asset/physical-delete)])]
+                           {:title (t :asset/confirm-delete (.toLocaleLowerCase (t :text/image)))
+                            :outside-cancel? true})
+                          (p/then (fn []
+                                    (shui/dialog-close!)
+                                    (editor-handler/delete-asset-of-block!
+                                     {:block-id block-id
+                                      :asset-block asset-block
+                                      :local? local?
+                                      :delete-local? @*local-selected?
+                                      :repo (state/get-current-repo)
+                                      :href src
+                                      :title title
+                                      :full-text full-text})))))))]
+            [:.asset-action-bar {:aria-hidden "true"}
+             (shui/button-group
+              (shui/button
+               {:variant :outline
+                :size :icon
+                :class "h-7 w-7"
+                :on-pointer-down util/stop
+                :on-click (fn [e]
+                            (shui/popup-show! (.closest (.-target e) ".asset-action-bar")
+                                              (fn []
+                                                [:div
+                                                 {:on-click #(shui/popup-hide!)}
                                                  (shui/dropdown-menu-item
-                                                  {:on-click (fn [e]
-                                                               (util/stop e)
-                                                               (if local?
-                                                                 (ipc/ipc "openFileInFolder" image-src)
-                                                                 (js/window.apis.openExternal image-src)))}
+                                                  {:on-click #(some-> (db/entity [:block/uuid (get-blockid)])
+                                                                      (editor-handler/edit-block! :max {:container-id :unknown-container}))}
                                                   [:span.flex.items-center.gap-1
-                                                   (ui/icon "folder-pin") (t (if local? :asset/show-in-folder :asset/open-in-browser))]))
+                                                   (ui/icon "edit") (t :asset/edit-block)])
+                                                 (shui/dropdown-menu-item
+                                                  {:on-click handle-copy!}
+                                                  [:span.flex.items-center.gap-1
+                                                   (ui/icon "copy") (t :asset/copy)])
+                                                 (when (util/electron?)
+                                                   (shui/dropdown-menu-item
+                                                    {:on-click (fn [e]
+                                                                 (util/stop e)
+                                                                 (if local?
+                                                                   (ipc/ipc "openFileInFolder" image-src)
+                                                                   (js/window.apis.openExternal image-src)))}
+                                                    [:span.flex.items-center.gap-1
+                                                     (ui/icon "folder-pin") (t (if local? :asset/show-in-folder :asset/open-in-browser))]))
 
-                                               (when-not config/publishing?
-                                                 [:<>
-                                                  (shui/dropdown-menu-separator)
-                                                  (shui/dropdown-menu-item
-                                                   {:on-click handle-delete!}
-                                                   [:span.flex.items-center.gap-1.text-red-700
-                                                    (ui/icon "trash") (t :asset/delete)])])])
-                                            {:align :start
-                                             :dropdown-menu? true}))}
-             (shui/tabler-icon "dots-vertical")))])])]))
+                                                 (when-not config/publishing?
+                                                   [:<>
+                                                    (shui/dropdown-menu-separator)
+                                                    (shui/dropdown-menu-item
+                                                     {:on-click handle-delete!}
+                                                     [:span.flex.items-center.gap-1.text-red-700
+                                                      (ui/icon "trash") (t :asset/delete)])])])
+                                              {:align :start
+                                               :dropdown-menu? true}))}
+               (shui/tabler-icon "dots-vertical")))])])])))
 
-;; TODO: store image height and width for better ux
 (rum/defcs ^:large-vars/cleanup-todo resizable-image <
   (rum/local nil ::size)
   {:will-unmount (fn [state]
@@ -412,16 +432,10 @@
   (let [breadcrumb? (:breadcrumb? config)
         positioned? (:property-position config)
         asset-block (:asset-block config)
-        width (or (get-in asset-block [:logseq.property.asset/resize-metadata :width])
-                  (:width metadata))
+        width (:width metadata)
         *width (get state ::size)
-        width (or @*width width 250)
-        metadata' (merge
-                   (cond->
-                    {:height 125}
-                     width
-                     (assoc :width width))
-                   metadata)
+        width (or @*width width)
+        metadata' (assoc metadata :width width)
         resizable? (and (not (mobile-util/native-platform?))
                         (not breadcrumb?)
                         (not positioned?))
@@ -505,14 +519,13 @@
         repo (state/get-current-repo)
         href (config/get-local-asset-absolute-path href)
         db-based? (config/db-based-graph? repo)]
-    (when (and (or db-based?
-                   (util/electron?)
-                   (mobile-util/native-platform?))
-               (nil? @src))
+
+    (when (nil? @src)
       (p/then (assets-handler/<make-asset-url href)
               #(reset! src (common-util/safe-decode-uri-component %))))
-
-    (when @src
+    (:image-placeholder config)
+    (if-not @src
+      (:image-placeholder config)
       (let [ext (keyword (or (util/get-file-ext @src)
                              (util/get-file-ext href)))
             repo (state/get-current-repo)
@@ -715,9 +728,10 @@
 
    All page-names are sanitized except page-name-in-block"
   [state
-   {:keys [contents-page? whiteboard-page? other-position? show-unique-title?
-           on-context-menu with-parent? stop-event-propagation?]
-    :or {with-parent? true}
+   {:keys [contents-page? whiteboard-page? other-position?
+           on-context-menu stop-event-propagation? with-tags? show-unique-title?]
+    :or {with-tags? true
+         show-unique-title? true}
     :as config}
    page-entity children label]
   (let [*mouse-down? (::mouse-down? state)
@@ -780,11 +794,6 @@
            [:span {:class (str "icon-emoji-wrap " (when emoji? "as-emoji"))}
             icon])))
 
-     (when (and (ldb/page? page-entity) with-parent?)
-       (when-let [parent (:block/parent page-entity)]
-         (when-not (ldb/library? parent)
-           [:span.select-none (str (:block/title parent) "/")])))
-
      [:span
       (if (and (coll? children) (seq children))
         (for [child children]
@@ -793,51 +802,27 @@
             (let [{:keys [content children]} (last child)
                   page-name (subs content 2 (- (count content) 2))]
               (rum/with-key (page-reference (assoc config :children children) page-name nil) page-name))))
-        (let [page-component (cond
-                               (and label
-                                    (string? label)
-                                    (not (string/blank? label)))                    ; alias
-                               label
+        (cond
+          (and label
+               (string? label)
+               (not (string/blank? label)))                    ; alias
+          label
 
-                               (coll? label)
-                               (->elem :span (map-inline config label))
+          (coll? label)
+          (->elem :span (map-inline config label))
 
-                               show-unique-title?
-                               (block-handler/block-unique-title page-entity)
+          (ldb/page? page-entity)
+          (if untitled?
+            (t :untitled)
+            (let [s (util/trim-safe (if show-unique-title?
+                                      (block-handler/block-unique-title page-entity {:with-tags? with-tags?})
+                                      (:block/title page-entity)))]
+              (if (and tag? (not (:hide-tag-symbol? config)))
+                (str "#" s)
+                s)))
 
-                               :else
-                               (let [title (:block/title page-entity)
-                                     s (cond untitled?
-                                             (t :untitled)
-
-                                             ;; The page-name-in-block generated by the auto-complete is not page-name-sanitized
-                                             (pdf-utils/hls-file? page-name)
-                                             (pdf-utils/fix-local-asset-pagename page-name)
-
-                                             (not= (util/safe-page-name-sanity-lc title) page-name)
-                                             page-name                  ;; page-name-in-block might be overridden (legacy))
-
-                                             title
-                                             (util/trim-safe title)
-
-                                             :else
-                                             (util/trim-safe page-name))
-                                     _ (when-not page-entity (js/console.warn "page-inner's page-entity is nil, given page-name: " page-name))
-                                     s (cond
-                                         (not (string? s))
-                                         (do
-                                           (prn :debug :unknown-title-error :title s
-                                                :data (db/pull (:db/id page-entity)))
-                                           "Unknown title")
-                                         (re-find db-content/id-ref-pattern s)
-                                         (db-content/content-id-ref->page s (:block/refs page-entity))
-                                         :else
-                                         s)
-                                     s (if (and tag? (not (:hide-tag-symbol? config))) (str "#" s) s)]
-                                 (if (ldb/page? page-entity)
-                                   s
-                                   (block-title (assoc config :page-ref? true) page-entity {}))))]
-          page-component))]]))
+          :else
+          (block-title (assoc config :page-ref? true) page-entity {})))]]))
 
 (rum/defc popup-preview-impl
   [children {:keys [*timer *timer1 visible? set-visible! render *el-popup]}]
@@ -1104,13 +1089,35 @@
         file-exists? @(::file-exists? state)
         repo (state/get-current-repo)
         asset-file-write-finished? (state/sub :assets/asset-file-write-finish
-                                              {:path-in-sub-atom [repo (str (:block/uuid block))]})]
-    (when (or file-exists? asset-file-write-finished?)
-      (asset-link (assoc config :asset-block block)
+                                              {:path-in-sub-atom [repo (str (:block/uuid block))]})
+        asset-type (:logseq.property.asset/type block)
+        image? (contains? (common-config/img-formats) (keyword asset-type))
+        width (get-in block [:logseq.property.asset/resize-metadata :width])
+        asset-width (:logseq.property.asset/width block)
+        asset-height (:logseq.property.asset/height block)
+        img-metadata (when image?
+                       (let [width (or width 250 asset-width)
+                             aspect-ratio (when (and asset-width asset-height)
+                                            (/ asset-width asset-height))]
+                         (merge
+                          (when width
+                            {:width width})
+                          (when (and width aspect-ratio)
+                            {:height (/ width aspect-ratio)}))))
+        img-placeholder (when image?
+                          [:div.img-placeholder.asset-container
+                           {:style img-metadata}])]
+    (cond
+      (or file-exists? asset-file-write-finished?)
+      (asset-link (assoc config
+                         :asset-block block
+                         :image-placeholder img-placeholder)
                   (:block/title block)
                   (path/path-join (str "../" common-config/local-assets-dir) file)
-                  nil
-                  nil))))
+                  img-metadata
+                  nil)
+      image?
+      img-placeholder)))
 
 (defn- img-audio-video?
   [block]
@@ -1146,7 +1153,8 @@
               config' (assoc config
                              :label (mldoc/plain->text label)
                              :contents-page? contents-page?
-                             :show-icon? true?)
+                             :show-icon? true?
+                             :with-tags? false)
               asset? (some? (:logseq.property.asset/type block))
               brackets? (and (or show-brackets? nested-link?)
                              (not html-export?)
@@ -2348,7 +2356,6 @@
         block-ref? (:block-ref? config)
         block-type (or (keyword (pu/lookup block :logseq.property/ls-type)) :default)
         html-export? (:html-export? config)
-        bg-color (pu/lookup block :logseq.property/background-color)
         ;; `heading-level` is for backward compatibility, will remove it in later releases
         heading-level (:block/heading-level block)
         heading (or
@@ -2369,14 +2376,7 @@
         (when (and marker
                    (not (string/blank? marker))
                    (not= "nil" marker))
-          {:data-marker (str (string/lower-case marker))})
-        (when bg-color
-          (let [built-in-color? (ui/built-in-color? bg-color)]
-            {:style {:background-color (if built-in-color?
-                                         (str "var(--ls-highlight-color-" bg-color ")")
-                                         bg-color)
-                     :color (when-not built-in-color? "white")}
-             :class "px-1 with-bg-color"})))
+          {:data-marker (str (string/lower-case marker))}))
 
        ;; children
        (let [area?  (= :area (keyword (pu/lookup block :logseq.property.pdf/hl-type)))
@@ -3150,10 +3150,20 @@
         raw-mode-block (state/sub :editor/raw-mode-block)
         type-block-editor? (and (contains? #{:code} (:logseq.property.node/display-type block))
                                 (not= (:db/id block) (:db/id raw-mode-block)))
-        config (assoc config :block-parent-id block-id)]
+        config (assoc config :block-parent-id block-id)
+        bg-color (pu/lookup block :logseq.property/background-color)]
     [:div.block-content-or-editor-wrap
-     {:class (when (:page-title? config) "ls-page-title-container")
-      :data-node-type (some-> (:logseq.property.node/display-type block) name)}
+     (merge
+      {:class (util/classnames [{"ls-page-title-container" (:page-title? config)
+                                 "px-1 with-bg-color" bg-color}])
+       :data-node-type (some-> (:logseq.property.node/display-type block) name)}
+      (when bg-color
+        (let [built-in-color? (ui/built-in-color? bg-color)]
+          {:style {:background-color (if built-in-color?
+                                       (str "var(--ls-highlight-color-" bg-color ")")
+                                       bg-color)
+                   :color (when-not built-in-color? "white")}})))
+
      (when (and db-based? (not table?)) (block-positioned-properties config block :block-left))
      [:div.block-content-or-editor-inner
       [:div.block-row.flex.flex-1.flex-row.gap-1.items-center
@@ -3286,7 +3296,7 @@
 
 ;; "block-id - uuid of the target block of breadcrumb. page uuid is also acceptable"
 (rum/defc breadcrumb-aux < rum/reactive
-  [config repo block-id {:keys [show-page? indent? end-separator? _navigating-block]
+  [config repo block-id {:keys [show-page? indent? end-separator? _navigating-block disabled?]
                          :or {show-page? true}
                          :as opts}]
   (let [from-property (when (and block-id (config/db-based-graph? repo))
@@ -3302,8 +3312,10 @@
       (let [parents-props (doall
                            (for [{:block/keys [uuid name title] :as block} parents]
                              (if name
-                               [block (page-cp {:disable-preview? true
-                                                :with-parent? false} block) true]
+                               [block (page-cp (cond-> {:disable-preview? true}
+                                                 disabled?
+                                                 (assoc :disable-click? true))
+                                               block) true]
                                (let [result (block/parse-title-and-body
                                              uuid
                                              (get block :block/format :markdown)
@@ -3324,7 +3336,9 @@
                                           label' (if page?
                                                    label
                                                    (breadcrumb-fragment config block label opts))]
-                                      (rum/with-key label' (str (:block/uuid block))))))
+                                      (if (:disabled? opts)
+                                        label
+                                        (rum/with-key label' (str (:block/uuid block)))))))
                              (interpose (breadcrumb-separator)))]
         (when (seq breadcrumbs)
           [:div.breadcrumb.block-parents
@@ -3340,7 +3354,7 @@
            (when end-separator? (breadcrumb-separator))])))))
 
 (rum/defc breadcrumb
-  [config repo block-id {:keys [_show-page? _indent? _end-separator? _navigating-block]
+  [config repo block-id {:keys [_show-page? _indent? _end-separator? _navigating-block _disabled?]
                          :as opts}]
   (let [[block set-block!] (hooks/use-state (when (uuid? block-id)
                                               (db/entity [:block/uuid block-id])))]

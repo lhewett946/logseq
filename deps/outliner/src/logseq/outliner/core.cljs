@@ -272,7 +272,10 @@
           block (assoc block :block/tags tags')
           disallowed-tag? (fn [tag] (inline-tag-disallowed? db tag))
           disallowed-tags (filter disallowed-tag? tags')]
-      (if (seq disallowed-tags)
+      (if (and (seq disallowed-tags)
+               (some (fn [tag]
+                       (string/includes? (:block/title block) (str "#" (page-ref/->page-ref (:block/uuid tag)))))
+                     disallowed-tags))
         (-> block
             (update :block/tags
                     (fn [tags]
@@ -431,7 +434,7 @@
   (assoc-level-aux tree-vec children-key 1))
 
 (defn- assign-temp-id
-  [blocks replace-empty-target? target-block]
+  [db blocks replace-empty-target? target-block]
   (->> blocks
        (map-indexed
         (fn [idx block]
@@ -445,8 +448,23 @@
                 [(assoc block
                         :db/id (:db/id target-block)
                         :block/uuid (:block/uuid target-block))]
-                [[:db/retractEntity (:db/id target-block)] ; retract target-block first
-                 (assoc block :db/id db-id)])
+                (let [old-property-values (d/q
+                                           '[:find ?b ?a
+                                             :in $ ?v
+                                             :where
+                                             [?b ?a ?v]
+                                             [?v :block/uuid]]
+                                           db
+                                           (:db/id target-block))
+                      from-property (:logseq.property/created-from-property target-block)]
+                  (concat
+                   [[:db/retractEntity (:db/id target-block)] ; retract target-block first
+                    (cond-> (assoc block :db/id db-id)
+                      from-property
+                      (assoc :logseq.property/created-from-property (:db/id from-property)))]
+                   (map (fn [[b a]]
+                          [:db/add b a db-id])
+                        old-property-values))))
               [(assoc block :db/id db-id)]))))
        (apply concat)))
 
@@ -777,23 +795,25 @@
                                 :or {update-timestamps? true}}]
   {:pre [(seq blocks)
          (m/validate block-map-or-entity target-block)]}
-  (let [blocks (keep (fn [b]
-                       (if-let [eid (or (:db/id b)
-                                        (when-let [id (:block/uuid b)]
-                                          [:block/uuid id]))]
-                         (let [b' (if-let [e (if (de/entity? b) b (d/entity db eid))]
-                                    (merge
-                                     (into {} e)
-                                     {:db/id (:db/id e)
-                                      :block/title (or (:block/raw-title e) (:block/title e))}
+  (let [blocks (->>
+                (keep (fn [b]
+                        (if-let [eid (or (:db/id b)
+                                         (when-let [id (:block/uuid b)]
+                                           [:block/uuid id]))]
+                          (let [b' (if-let [e (if (de/entity? b) b (d/entity db eid))]
+                                     (merge
+                                      (into {} e)
+                                      {:db/id (:db/id e)
+                                       :block/title (or (:block/raw-title e) (:block/title e))}
+                                      b)
                                      b)
-                                    b)
-                               dissoc-keys (concat [:block/tx-id]
-                                                   (when (contains? #{:insert-template-blocks :paste} outliner-op)
-                                                     [:block/refs]))]
-                           (apply dissoc b' dissoc-keys))
-                         b))
-                     blocks)
+                                dissoc-keys (concat [:block/tx-id]
+                                                    (when (contains? #{:insert-template-blocks :paste} outliner-op)
+                                                      [:block/refs]))]
+                            (apply dissoc b' dissoc-keys))
+                          b))
+                      blocks)
+                (remove ldb/asset?))
         [target-block sibling?] (get-target-block db blocks target-block opts)
         _ (assert (some? target-block) (str "Invalid target: " target-block))
         replace-empty-target? (if (and (some? replace-empty-target?)
@@ -827,7 +847,7 @@
                            :tx (vec blocks-tx)
                            :blocks (vec blocks)
                            :target-block target-block}))
-          (let [tx (assign-temp-id blocks-tx replace-empty-target? target-block)
+          (let [tx (assign-temp-id db blocks-tx replace-empty-target? target-block)
                 old-db-id-blocks (->> (filter :block.temp/use-old-db-id? tx)
                                       (map :block/uuid)
                                       (set))

@@ -231,7 +231,7 @@
      (state/exit-editing-and-set-selected-blocks! [cell])
      (set-focus-timeout! (js/setTimeout #(.focus cell) 100)))))
 
-(rum/defc block-title
+(rum/defc ^:large-vars/cleanup-todo block-title
   "Used on table view"
   [block* {:keys [create-new-block width row property]}]
   (let [*ref (hooks/use-ref nil)
@@ -280,7 +280,8 @@
                                              :table? true
                                              :on-key-down
                                              (fn [e]
-                                               (when (= (util/ekey e) "Enter")
+                                               (when (and (= (util/ekey e) "Enter")
+                                                          (not (state/get-editor-action)))
                                                  (util/stop e)
                                                  (save-block-and-focus *ref set-focus-timeout! true)))}
                                             block)])))]
