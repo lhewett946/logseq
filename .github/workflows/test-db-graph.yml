@@ -43,7 +43,7 @@ jobs:
           bb: ${{env.BABASHKA_VERSION}}
 
       - name: Fetch scripts yarn deps
-        run: cd scripts && yarn install --frozen-lockfile
+        run: cd scripts && yarn install
 
       - name: Create DB graph with properties
         run: cd scripts && yarn nbb-logseq src/logseq/tasks/db_graph/create_graph_with_properties.cljs ./properties-graph
@@ -53,7 +53,7 @@ jobs:
         run: cd scripts && yarn nbb-logseq src/logseq/tasks/db_graph/create_graph_with_schema_org.cljs ./schema-graph
   
       - name: Fetch deps/db yarn deps
-        run: cd deps/db && yarn install --frozen-lockfile
+        run: cd deps/db && yarn install
   
       - name: Validate created DB graphs
         run: cd deps/db && yarn nbb-logseq script/validate_db.cljs ../../scripts/properties-graph ../../scripts/schema-graph --closed-maps --group-errors

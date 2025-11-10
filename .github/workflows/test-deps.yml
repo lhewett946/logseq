@@ -37,7 +37,7 @@ jobs:
           bb: ${{ env.BABASHKA_VERSION }}
 
       - name: Fetch yarn deps
-        run: yarn install --frozen-lockfile
+        run: yarn install
         working-directory: deps/db
 
       - name: Run nbb-logseq tests
@@ -77,7 +77,7 @@ jobs:
         working-directory: deps/graph-parser
   
       - name: Fetch yarn deps
-        run: yarn install --frozen-lockfile
+        run: yarn install
         working-directory: deps/graph-parser
   
       - name: Run ClojureScript tests
@@ -118,7 +118,7 @@ jobs:
           bb: ${{ env.BABASHKA_VERSION }}
 
       - name: Fetch yarn deps
-        run: yarn install --frozen-lockfile
+        run: yarn install
         working-directory: deps/common
   
       - name: Run nbb-logseq tests
@@ -163,7 +163,7 @@ jobs:
           bb: ${{ env.BABASHKA_VERSION }}
 
       - name: Fetch yarn deps
-        run: yarn install --frozen-lockfile
+        run: yarn install
         working-directory: deps/outliner
 
       - name: Run nbb-logseq tests
@@ -200,7 +200,7 @@ jobs:
           bb: ${{ env.BABASHKA_VERSION }}
 
       - name: Fetch yarn deps
-        run: yarn install --frozen-lockfile
+        run: yarn install
         working-directory: deps/publishing
 
       - name: Run nbb-logseq tests
@@ -237,7 +237,7 @@ jobs:
           bb: ${{ env.BABASHKA_VERSION }}
 
       - name: Fetch yarn deps
-        run: yarn install --frozen-lockfile
+        run: yarn install
         working-directory: deps/cli
 
       - name: Run nbb-logseq tests
