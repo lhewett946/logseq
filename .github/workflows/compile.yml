@@ -37,6 +37,6 @@ jobs:
     
       - name: Compile CLJS
         run: |
-          yarn install 
+          yarn install --frozen-lockfile 
           gulp build
           yarn cljs:release-electron

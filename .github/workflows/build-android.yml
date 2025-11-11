@@ -38,7 +38,7 @@ jobs:
 
       - name: Compile CLJS
         run: |
-          yarn install
+          yarn install --frozen-lockfile
           yarn release-mobile
   
       - name: Sync public to Android Project

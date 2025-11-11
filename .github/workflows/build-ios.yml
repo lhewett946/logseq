@@ -47,7 +47,7 @@ jobs:
           cli: ${{ env.CLOJURE_VERSION }}
 
       - name: Compile CLJS
-        run: yarn install && yarn release-mobile
+        run: yarn install --frozen-lockfile && yarn release-mobile
 
       - name: Prepare iOS build
         run: npx cap sync ios

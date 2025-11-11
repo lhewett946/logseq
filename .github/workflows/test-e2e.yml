@@ -48,7 +48,7 @@ jobs:
         run: clojure -A:cljs -P
 
       - name: Fetch yarn deps
-        run: yarn install
+        run: yarn install --frozen-lockfile
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: true
 
@@ -99,7 +99,7 @@ jobs:
   #      run: clojure -A:cljs -P
   #
   #    - name: Fetch yarn deps
-  #      run: yarn install
+  #      run: yarn install --frozen-lockfile
   #      env:
   #        PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: true
   #
