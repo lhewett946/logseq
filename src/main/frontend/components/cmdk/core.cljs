@@ -4,6 +4,7 @@
             [electron.ipc :as ipc]
             [frontend.components.block :as block]
             [frontend.components.cmdk.list-item :as list-item]
+            [frontend.components.icon :as icon-component]
             [frontend.config :as config]
             [frontend.context.i18n :refer [t]]
             [frontend.db :as db]
@@ -62,7 +63,7 @@
     (->>
      [(when current-page
         {:filter {:group :current-page} :text "Search only current page" :info "Add filter to search" :icon-theme :gray :icon "file"})
-      {:filter {:group :nodes} :text "Search only nodes" :info "Add filter to search" :icon-theme :gray :icon "letter-n"}
+      {:filter {:group :nodes} :text "Search only nodes" :info "Add filter to search" :icon-theme :gray :icon "point-filled"}
       {:filter {:group :commands} :text "Search only commands" :info "Add filter to search" :icon-theme :gray :icon "command"}
       {:filter {:group :files} :text "Search only files" :info "Add filter to search" :icon-theme :gray :icon "file"}
       {:filter {:group :themes} :text "Search only themes" :info "Add filter to search" :icon-theme :gray :icon "palette"}]
@@ -206,24 +207,12 @@
 ;; Each result group has it's own load-results function
 (defmulti load-results (fn [group _state] group))
 
-(defn get-page-icon
-  [entity]
-  (cond
-    (ldb/class? entity)
-    "hash"
-    (ldb/property? entity)
-    "letter-p"
-    (ldb/whiteboard? entity)
-    "writing"
-    :else
-    "file"))
-
 (defmethod load-results :initial [_ state]
   (when-let [db (db/get-db)]
     (let [!results (::results state)
           recent-pages (map (fn [block]
                               (let [text (block-handler/block-unique-title block)
-                                    icon (get-page-icon block)]
+                                    icon (icon-component/get-node-icon-cp block {:ignore-current-icon? true})]
                                 {:icon icon
                                  :icon-theme :gray
                                  :text text
@@ -261,7 +250,7 @@
       (->> search-results
            (map (fn [block]
                   (let [text (block-handler/block-unique-title block)
-                        icon (get-page-icon block)]
+                        icon (icon-component/get-node-icon-cp block {:ignore-current-icon? true})]
                     {:icon icon
                      :icon-theme :gray
                      :text text
@@ -289,15 +278,16 @@
   (let [entity (db/entity [:block/uuid (:block/uuid page)])
         source-page (or (model/get-alias-source-page repo (:db/id entity))
                         (:alias page))
-        icon (get-page-icon entity)
-        title (block-handler/block-unique-title (or entity page))
-        title' (if source-page (str title " -> alias: " (:block/title source-page)) title)]
+        icon (icon-component/get-node-icon-cp entity {:ignore-current-icon? true})
+        title (block-handler/block-unique-title (or entity page)
+                                                {:alias (:block/title source-page)})]
     (hash-map :icon icon
               :icon-theme :gray
-              :text title'
+              :text title
               :header (when (:block/parent entity)
                         (block/breadcrumb {:disable-preview? true
-                                           :search? true} repo (:block/uuid page) {}))
+                                           :search? true} repo (:block/uuid page)
+                                          {:disabled? true}))
               :alias (:alias page)
               :source-block (or source-page page))))
 
@@ -305,12 +295,13 @@
   [repo block current-page input]
   (let [id (:block/uuid block)
         text (block-handler/block-unique-title block)
-        icon "letter-n"]
+        icon (icon-component/get-node-icon-cp block {:ignore-current-icon? true})]
     {:icon icon
      :icon-theme :gray
      :text (highlight-content-query text input)
      :header (block/breadcrumb {:disable-preview? true
-                                :search? true} repo id {})
+                                :search? true} repo id
+                               {:disabled? true})
      :current-page? (when-let [page-id (:block/page block)]
                       (= page-id (:block/uuid current-page)))
      :source-block block}))
@@ -415,7 +406,7 @@
                              {:icon "node"
                               :icon-theme :gray
                               :text (highlight-content-query (:block/title block) @!input)
-                              :header (block/breadcrumb {:search? true} repo id {})
+                              :header (block/breadcrumb {:search? true} repo id {:disabled? true})
                               :current-page? true
                               :source-block block})) blocks)]
         (swap! !results update :current-page merge {:status :success :items items})))
@@ -577,7 +568,7 @@
                        create-page? (page-handler/<create! @!input {:redirect? true}))]
         (shui/dialog-close! :ls-dialog-cmdk)
         (when (and create-class? result)
-          (state/pub-event! [:dialog/show-block (:class item) {:tag-dialog? true}]))))))
+          (state/pub-event! [:dialog/show-block result {:tag-dialog? true}]))))))
 
 (defn- get-filter-user-input
   [input]
