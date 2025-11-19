@@ -19,7 +19,7 @@
         (string/split classpath #":")))
 
 (defn- pretty-print-merge
-  "Merge map into string while preversing whitespace"
+  "Merge map into string while preserving whitespace"
   [s m]
   (-> (reduce (fn [acc [k v]]
                 (rewrite/assoc acc k v))

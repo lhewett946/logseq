@@ -46,7 +46,7 @@
                       :contextIsolation        true
                       :spellcheck              ((fnil identity true) (cfgs/get-item :spell-check))
                        ;; Remove OverlayScrollbars and transition `.scrollbar-spacing`
-                       ;; to use `scollbar-gutter` after the feature is implemented in browsers.
+                       ;; to use `scrollbar-gutter` after the feature is implemented in browsers.
                       :enableBlinkFeatures     'OverlayScrollbars'
                       :preload                 (node-path/join js/__dirname "js/preload.js")}}
 
