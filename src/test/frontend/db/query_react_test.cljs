@@ -131,7 +131,7 @@ created-at:: %s"
       ":-XT-HHMM and :+XT-HHMM resolve to correct datetime range")
 
   (is (= [] (blocks-created-between-inputs :-0d-abcd :+1d-23.45))
-      ":-XT-HHMM and :+XT-HHMM will not reoslve with invalid time formats but will fail gracefully"))
+      ":-XT-HHMM and :+XT-HHMM will not resolve with invalid time formats but will fail gracefully"))
 
 (deftest cache-input-for-page-inputs
   (load-test-files [{:file/path "pages/a.md" :file/content "- a #shared-tag"}

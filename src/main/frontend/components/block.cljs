@@ -3902,7 +3902,7 @@
 (defn- set-collapsed-block!
   [block-id v]
   (if (false? v)
-    (editor-handler/expand-block! block-id {:skip-db-collpsing? true})
+    (editor-handler/expand-block! block-id {:skip-db-collapsing? true})
     (state/set-collapsed-block! block-id v)))
 
 (rum/defcs loaded-block-container < rum/reactive db-mixins/query
