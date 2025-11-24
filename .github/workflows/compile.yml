@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check Out Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
     
       # Must set up Java before running some Clojure tools
       - name: Set up Java
