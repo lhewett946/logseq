@@ -48,7 +48,7 @@ jobs:
     needs: [check-typos, lint, test-e2e, test-db-graph, test-clojure-script, test-deps]
 
   build-ios:
-    uses: ./.github/workflows/build-ios.yml
+    uses: ./.github/workflows/build-ios-release.yml
     needs: [check-typos, lint, test-e2e, test-db-graph, test-clojure-script, test-deps]
   
   build-linux:
