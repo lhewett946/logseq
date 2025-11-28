@@ -2157,7 +2157,7 @@ Similar to re-frame subscriptions"
   (sub :auth/id-token))
 
 (defn get-auth-refresh-token []
-  (str (:auth/refresh-token @state)))
+  (:auth/refresh-token @state))
 
 (defn set-file-sync-manager [graph-uuid v]
   (when (and graph-uuid v)
@@ -2295,10 +2295,11 @@ Similar to re-frame subscriptions"
   (swap! state assoc :ui/radix-color color)
   (storage/set :ui/radix-color color))
 
-(defn set-editor-font! [font]
-  (let [font (if (keyword? font) (name font) (str font))]
-    (swap! state assoc :ui/editor-font font)
-    (storage/set :ui/editor-font font)))
+(defn set-editor-font! [config]
+  (let [config' (:ui/editor-font @state)
+        config (if (map? config') (merge config' config) {})]
+    (swap! state assoc :ui/editor-font config)
+    (storage/set :ui/editor-font config)))
 
 (defn handbook-open?
   []

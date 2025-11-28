@@ -72,7 +72,7 @@
             [logseq.outliner.property :as outliner-property]
             [logseq.shui.dialog.core :as shui-dialog]
             [logseq.shui.popup.core :as shui-popup]
-            [mobile.state :as mobile-state]
+            [logseq.shui.ui :as shui]
             [promesa.core :as p]
             [rum.core :as rum]))
 
@@ -1071,8 +1071,8 @@
                                       (assoc :db/id (:db/id b)))))))]
         (common-handler/copy-to-clipboard-without-id-property! repo (get block :block/format :markdown) content (when html? html) copied-blocks))
       (state/set-block-op-type! :copy)
-      (when-not (util/capacitor?)
-        (notification/show! "Copied!" :success)))))
+      ;; (notification/show! "Copied!" :success)
+      )))
 
 (defn copy-block-refs
   []
@@ -1561,7 +1561,7 @@
 
         (if (assets-handler/exceed-limit-size? file)
           (do
-            (notification/show! [:div "Asset size shouldn't be larger than 100M"]
+            (notification/show! "Asset size shouldn't be larger than 100M"
                                 :warning
                                 false)
             (throw (ex-info "Asset size shouldn't be larger than 100M" {:file-name file-name})))
@@ -2301,8 +2301,7 @@
 
                  (catch :default ^js/Error e
                    (notification/show!
-                    [:p.content
-                     (util/format "Template insert error: %s" (.-message e))]
+                    (util/format "Template insert error: %s" (.-message e))
                     :error)))))))))))
 
 (defn template-on-chosen-handler
@@ -2419,8 +2418,7 @@
                 ;; cursor in other positions of :ke|y: or ke|y::, move to line end for inserting value.
                 (if (property-file/property-key-exist?-when-file-based format content property-key)
                   (notification/show!
-                   [:p.content
-                    (util/format "Property key \"%s\" already exists!" property-key)]
+                   (util/format "Property key \"%s\" already exists!" property-key)
                    :error)
                   (cursor/move-cursor-to-line-end input)))
 
@@ -4067,7 +4065,7 @@
              (move-blocks! children today-last-child {:sibling? true})
              (move-blocks! children today {:sibling? false})))
          (state/close-modal!)
-         (mobile-state/set-popup! nil)
+         (shui/popup-hide!)
          (when (seq children)
            (notification/show! "Blocks added to today!" :success)))))))
 
@@ -4080,8 +4078,6 @@
 (defn quick-add-open-last-block!
   []
   (when-let [add-page (ldb/get-built-in-page (db/get-db) common-config/quick-add-page-name)]
-    (prn :debug :add-page add-page
-         :children (:block/_parent add-page))
     (when (:block/_parent add-page)
       (let [block (last (ldb/sort-by-order (:block/_parent add-page)))]
         (edit-block! block :max {:container-id :unknown-container})))))
