@@ -241,7 +241,7 @@
      (state/exit-editing-and-set-selected-blocks! [cell])
      (set-focus-timeout! (js/setTimeout #(.focus cell) 100)))))
 
-(rum/defc ^:large-vars/cleanup-todo block-title
+(rum/defc ^:large-vars/cleanup-todo block-title < rum/static
   "Used on table view"
   [block* {:keys [create-new-block width row property]}]
   (let [*ref (hooks/use-ref nil)
@@ -811,8 +811,7 @@
 
 (defn- click-cell
   [node]
-  (when-let [trigger (or (dom/sel1 node ".jtrigger")
-                         (dom/sel1 node ".table-block-title"))]
+  (when-let [trigger (dom/sel1 node ".jtrigger")]
     (.click trigger)))
 
 (defn navigate-to-cell
@@ -1989,12 +1988,13 @@
 
       (when db-based? (filter-properties view-entity columns table option))
 
-      (search input {:on-change set-input!
-                     :set-input! set-input!})
+      [:div.view-action-search
+       (search input {:on-change set-input!
+                      :set-input! set-input!})]
 
       (when db-based?
-        [:div.text-muted-foreground.text-sm
-         (pv/property-value view-entity (db/entity :logseq.property.view/type) {})])
+        [:div.view-action-type.text-muted-foreground.text-sm
+         (pv/property-value view-entity (db/entity :logseq.property.view/type) {:icon? true})])
 
       (when db-based? (more-actions view-entity columns table option))
 
