@@ -24,7 +24,7 @@
   "dependencies": {
     "@fastify/cors": "11.0.1",
     "@logseq/rsapi": "0.0.92",
-    "@modelcontextprotocol/sdk": "^1.17.5",
+    "@modelcontextprotocol/sdk": "^1.24.0",
     "@sentry/electron": "2.5.1",
     "abort-controller": "3.0.0",
     "chokidar": "^4.0.3",
