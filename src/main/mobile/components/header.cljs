@@ -2,8 +2,6 @@
   "App top header"
   (:require ["@capacitor/dialog" :refer [Dialog]]
             [clojure.string :as string]
-            [frontend.common.missionary :as c.m]
-            [frontend.components.repo :as repo]
             [frontend.components.rtc.indicator :as rtc-indicator]
             [frontend.date :as date]
             [frontend.db :as db]
@@ -17,7 +15,6 @@
             [frontend.mobile.util :as mobile-util]
             [frontend.state :as state]
             [frontend.ui :as ui]
-            [frontend.util :as util]
             [goog.date :as gdate]
             [logseq.common.util :as common-util]
             [logseq.db :as ldb]
@@ -25,8 +22,8 @@
             [logseq.shui.hooks :as hooks]
             [logseq.shui.ui :as shui]
             [missionary.core :as m]
+            [mobile.components.settings :as mobile-settings]
             [mobile.components.ui :as ui-component]
-            [mobile.state :as mobile-state]
             [promesa.core :as p]
             [rum.core :as rum]))
 
@@ -42,86 +39,29 @@
     (-> (.showDatePicker mobile-util/ui-local)
         (p/then (fn [^js e] (some-> e (.-value) (apply-date!)))))))
 
-(rum/defc log
-  []
-  (let [[error-only? set-error-only!] (hooks/use-state false)
-        [reversed? set-reversed!] (hooks/use-state false)
-        [show-worker-log? set-show-worker-log!] (hooks/use-state false)
-        [worker-records set-worker-records!] (hooks/use-state [])]
-    (hooks/use-effect!
-     #(c.m/run-task*
-       (m/sp
-         (set-worker-records! (c.m/<? (state/<invoke-db-worker :thread-api/mobile-logs)))))
-     [])
-    [:div.flex.flex-col.gap-1.p-2.ls-debug-log
-     [:div.flex.flex-row.justify-between
-      [:div.text-lg.font-medium.mb-2 "Full log: "]
-
-      (shui/button
-       {:variant :ghost
-        :size :sm
-        :on-click (fn []
-                    (util/copy-to-clipboard! (str (string/join "\n\n" @mobile-state/*log)
-                                                  "\n\n================================================================\n\n"
-                                                  (string/join "\n\n" worker-records))))}
-       "Copy")]
-
-     [:div.flex.flex-row.gap-2
-      (shui/button
-       {:size :sm
-        :on-click (fn []
-                    (set-error-only! (not error-only?)))}
-       (if error-only?
-         "All"
-         "Errors only"))
-
-      (shui/button
-       {:size :sm
-        :on-click (fn []
-                    (set-reversed! (not reversed?)))}
-       (if reversed?
-         "New record first"
-         "Old record first"))
-
-      (shui/button
-       {:size :sm
-        :on-click (fn []
-                    (set-show-worker-log! (not show-worker-log?)))}
-       (if show-worker-log?
-         "UI logs"
-         "worker logs"))]
-
-     (let [records (cond->> (if show-worker-log? worker-records @mobile-state/*log)
-                     error-only?
-                     (filter (fn [record] (contains? #{:error :severe} (:level record))))
-                     reversed?
-                     reverse)]
-       [:ul
-        (for [record records]
-          [:li (str (:level record) " " (:message record))])])]))
-
-(defn- open-settings-actions! []
+(defn- open-home-settings-actions! []
   (ui-component/open-popup!
    (fn []
-     [:div
-      (when (user-handler/logged-in?)
-        (ui/menu-link {:on-click #(p/do!
-                                   (user-handler/logout)
-                                   (shui/popup-hide!))}
-                      [:span.text-lg.flex.gap-2.items-center.text-red-700
-                       (shui/tabler-icon "logout" {:class "opacity-80" :size 22})
-                       "Logout"]))
-      (ui/menu-link {:on-click #(js/window.open "https://github.com/logseq/db-test/issues")}
-                    [:span.text-lg.flex.gap-2.items-center
-                     (shui/tabler-icon "bug" {:class "opacity-70" :size 22})
-                     "Report bug"])
-      (ui/menu-link {:on-click (fn []
-                                 (shui/popup-show! nil (fn [] (log)) {}))}
-                    [:span.text-lg.flex.gap-2.items-center
-                     (shui/tabler-icon "square-letter-l" {:class "opacity-70" :size 22})
-                     "Check log"])])
-   {:title "Actions"
-    :default-height false}))
+     (mobile-settings/page))
+   {}))
+
+(defn- open-graph-settings-actions! []
+  (ui-component/open-popup!
+   (fn []
+     [:div.-mx-2
+      ;; TODO: support export
+      ;; (ui/menu-link
+      ;;  {:on-click (fn [] (route-handler/redirect! {:to :export}))}
+      ;;  [:span.text-lg.flex.gap-2.items-center
+      ;;   (shui/tabler-icon "database-export" {:class "opacity-80" :size 22})
+      ;;   "Export"])
+
+      (ui/menu-link
+       {:on-click (fn [] (route-handler/redirect! {:to :import}))}
+       [:span.text-lg.flex.gap-2.items-center
+        (shui/tabler-icon "file-upload" {:class "opacity-80" :size 22})
+        "Import"])])
+   {:default-height false}))
 
 (defn open-page-settings
   [block]
@@ -129,12 +69,6 @@
    nil
    (fn []
      [:div.-mx-2
-      (ui/menu-link
-       {:on-click shui/popup-hide!}
-       [:span.text-lg.flex.gap-2.items-center
-        (shui/tabler-icon "copy" {:class "opacity-80" :size 22})
-        "Copy"])
-
       (ui/menu-link
        {:on-click
         (fn []
@@ -163,22 +97,16 @@
    {:title "Actions"
     :default-height false}))
 
-(defn- open-graph-switcher! []
-  (ui-component/open-popup!
-   (fn []
-     [:div.px-1
-      (repo/repos-dropdown-content {})])
-   {:default-height false}))
-
 (defn- register-native-top-bar-events! []
   (when (and (mobile-util/native-ios?)
              (not @native-top-bar-listener?))
     (.addListener ^js mobile-util/native-top-bar "buttonTapped"
                   (fn [^js e]
                     (case (.-id e)
-                      "title" (open-graph-switcher!)
                       "calendar" (open-journal-calendar!)
-                      "settings-actions" (open-settings-actions!)
+                      "add-graph" (state/pub-event! [:graph/new-db-graph])
+                      "home-setting" (open-home-settings-actions!)
+                      "graph-setting" (open-graph-settings-actions!)
                       "sync" (shui/popup-show! nil
                                                (rtc-indicator/details)
                                                {})
@@ -210,11 +138,13 @@
           base {:title title
                 :hidden (boolean hidden?)}
           page? (= route-name :page)
+          left-buttons (when (and (= tab "home") (nil? route-view))
+                         [(conj {:id "calendar" :systemIcon "calendar"})])
           right-buttons (cond
                           (= tab "home")
                           (cond-> []
                             (nil? route-view)
-                            (conj {:id "calendar" :systemIcon "calendar"})
+                            (conj {:id "home-setting" :systemIcon "ellipsis"})
                             (and rtc-indicator? (not page?))
                             (conj {:id "sync" :systemIcon "circle.fill" :color sync-color
                                    :size "small"})
@@ -222,13 +152,14 @@
                             (into [{:id "page-setting" :systemIcon "ellipsis"}
                                    {:id "favorite" :systemIcon (if favorited? "star.fill" "star")}]))
 
-                          (= tab "settings")
-                          [{:id "settings-actions" :systemIcon "ellipsis"}]
+                          (= tab "graphs")
+                          [{:id "graph-setting" :systemIcon "ellipsis"}
+                           {:id "add-graph" :systemIcon "plus"}]
 
                           :else nil)
           header (cond-> base
-                   right-buttons (assoc :rightButtons right-buttons)
-                   (and (= tab "home") (not route-view)) (assoc :titleClickable true))]
+                   left-buttons (assoc :leftButtons left-buttons)
+                   right-buttons (assoc :rightButtons right-buttons))]
       (.configure ^js mobile-util/native-top-bar
                   (clj->js header)))))
 

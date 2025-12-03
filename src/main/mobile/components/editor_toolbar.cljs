@@ -8,7 +8,6 @@
             [frontend.mobile.haptics :as haptics]
             [frontend.mobile.util :as mobile-util]
             [frontend.state :as state]
-            [frontend.util :as util]
             [frontend.util.cursor :as cursor]
             [goog.dom :as gdom]
             [logseq.common.util.page-ref :as page-ref]
@@ -180,6 +179,7 @@
                         (tag-action)
                         (camera-action)
                         (page-ref-action)
+                        audio
                         (slash-action)
                         (redo-action)])]
     {:main main-actions
@@ -238,8 +238,7 @@
   (let [editing? (state/sub :editor/editing?)
         code-block? (state/sub :editor/code-block-context)
         quick-add? (mobile-state/quick-add-open?)
-        show? (and (util/mobile?)
-                   (not code-block?)
+        show? (and (not code-block?)
                    editing?)
         actions (toolbar-actions quick-add?)]
     (when (mobile-util/native-ios?)

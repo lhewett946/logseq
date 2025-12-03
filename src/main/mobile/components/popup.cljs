@@ -38,8 +38,6 @@
 (defn- dismiss-native-sheet!
   []
   (when-let [^js plugin mobile-util/native-bottom-sheet]
-    (mobile-state/set-popup! nil)
-    (reset! *last-popup-data nil)
     (.dismiss plugin #js {})))
 
 (defn- handle-native-sheet-state!
@@ -52,16 +50,14 @@
         (editor-handler/quick-add-open-last-block!))
 
       dismissing?
-      (let [capture? (mobile-state/quick-add-open?)]
-        (when (some? @mobile-state/*popup-data)
-          (p/do!
-           (mobile-state/set-popup! nil)
-           (reset! *last-popup-data nil)
-           (.dismiss ^js mobile-util/native-editor-toolbar)
-           (state/pub-event! [:mobile/clear-edit])
-           (when capture?
-             (when-let [tab @mobile-state/*tab]
-               (mobile-state/set-tab! tab))))))
+      (when (some? @mobile-state/*popup-data)
+        (p/do!
+         (state/pub-event! [:mobile/clear-edit])
+         (mobile-state/set-popup! nil)
+         (reset! *last-popup-data nil)
+         (when (mobile-util/native-ios?)
+           (let [plugin ^js mobile-util/native-editor-toolbar]
+             (.dismiss plugin)))))
 
       :else
       nil)))
