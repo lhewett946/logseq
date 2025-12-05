@@ -2,12 +2,14 @@
   "App top header"
   (:require ["@capacitor/dialog" :refer [Dialog]]
             [clojure.string :as string]
+            [frontend.components.repo :as repo]
             [frontend.components.rtc.indicator :as rtc-indicator]
             [frontend.date :as date]
             [frontend.db :as db]
             [frontend.db.async :as db-async]
             [frontend.db.conn :as db-conn]
             [frontend.flows :as flows]
+            [frontend.handler.editor :as editor-handler]
             [frontend.handler.notification :as notification]
             [frontend.handler.page :as page-handler]
             [frontend.handler.route :as route-handler]
@@ -97,13 +99,26 @@
    {:title "Actions"
     :default-height false}))
 
+(defn- open-graph-switch!
+  []
+  (ui-component/open-popup!
+   (fn []
+     [:div.px-1
+      (repo/repos-dropdown-content {:footer? false})])
+   {:default-height false}))
+
 (defn- register-native-top-bar-events! []
   (when (and (mobile-util/native-ios?)
              (not @native-top-bar-listener?))
     (.addListener ^js mobile-util/native-top-bar "buttonTapped"
                   (fn [^js e]
                     (case (.-id e)
+                      "title" (open-graph-switch!)
                       "calendar" (open-journal-calendar!)
+                      "capture" (do
+                                  (state/clear-edit!)
+                                  (editor-handler/quick-add-blocks!))
+                      "audio-record" (state/pub-event! [:mobile/start-audio-record])
                       "add-graph" (state/pub-event! [:graph/new-db-graph])
                       "home-setting" (open-home-settings-actions!)
                       "graph-setting" (open-graph-settings-actions!)
@@ -128,38 +143,43 @@
 (defn- configure-native-top-bar!
   [repo {:keys [tab title route-name route-view sync-color favorited?]}]
   (when (mobile-util/native-ios?)
-    (let [hidden? (and (contains? #{"search"
-                                    ;; "favorites"
-                                    }tab)
-                       (not= route-name :page))
+    (let [hidden? false
           rtc-indicator? (and repo
                               (ldb/get-graph-rtc-uuid (db/get-db))
                               (user-handler/logged-in?))
           base {:title title
                 :hidden (boolean hidden?)}
           page? (= route-name :page)
-          left-buttons (when (and (= tab "home") (nil? route-view))
-                         [(conj {:id "calendar" :systemIcon "calendar"})])
+          left-buttons (cond
+                         (and (= tab "home") (nil? route-view))
+                         [(conj {:id "calendar" :systemIcon "calendar"})]
+                         (and (= tab "capture") (nil? route-view))
+                         [(conj {:id "audio-record" :systemIcon "waveform"})])
           right-buttons (cond
+                          page?
+                          (into [{:id "page-setting" :systemIcon "ellipsis"}
+                                 {:id "favorite" :systemIcon (if favorited? "star.fill" "star")}])
+
                           (= tab "home")
                           (cond-> []
                             (nil? route-view)
                             (conj {:id "home-setting" :systemIcon "ellipsis"})
                             (and rtc-indicator? (not page?))
                             (conj {:id "sync" :systemIcon "circle.fill" :color sync-color
-                                   :size "small"})
-                            page?
-                            (into [{:id "page-setting" :systemIcon "ellipsis"}
-                                   {:id "favorite" :systemIcon (if favorited? "star.fill" "star")}]))
+                                   :size "small"}))
 
                           (= tab "graphs")
                           [{:id "graph-setting" :systemIcon "ellipsis"}
                            {:id "add-graph" :systemIcon "plus"}]
 
+                          (= tab "capture")
+                          [{:id "capture" :systemIcon "paperplane"}]
+
                           :else nil)
           header (cond-> base
                    left-buttons (assoc :leftButtons left-buttons)
-                   right-buttons (assoc :rightButtons right-buttons))]
+                   right-buttons (assoc :rightButtons right-buttons)
+                   (and (= tab "home") (not route-view)) (assoc :titleClickable true))]
       (.configure ^js mobile-util/native-top-bar
                   (clj->js header)))))
 
@@ -198,14 +218,14 @@
                              (:block/title block)
                              (= tab "home")
                              short-repo-name
+                             (= tab "search")
+                             "Search"
                              :else
                              (string/capitalize tab))]
            (configure-native-top-bar!
             current-repo
             {:tab tab
              :title title
-             :hidden? (and (= tab "search")
-                           (not= route-name :page))
              :route-name route-name
              :route-view route-view
              :sync-color sync-color

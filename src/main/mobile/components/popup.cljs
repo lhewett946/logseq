@@ -1,7 +1,6 @@
 (ns mobile.components.popup
   "Mobile popup"
-  (:require [frontend.handler.editor :as editor-handler]
-            [frontend.mobile.util :as mobile-util]
+  (:require [frontend.mobile.util :as mobile-util]
             [frontend.state :as state]
             [frontend.ui :as ui]
             [logseq.shui.popup.core :as shui-popup]
@@ -42,13 +41,9 @@
 
 (defn- handle-native-sheet-state!
   [^js data]
-  (let [presenting? (.-presenting data)
+  (let [;; presenting? (.-presenting data)
         dismissing? (.-dismissing data)]
     (cond
-      presenting?
-      (when (mobile-state/quick-add-open?)
-        (editor-handler/quick-add-open-last-block!))
-
       dismissing?
       (when (some? @mobile-state/*popup-data)
         (p/do!
