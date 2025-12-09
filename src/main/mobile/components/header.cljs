@@ -143,12 +143,12 @@
 (defn- configure-native-top-bar!
   [repo {:keys [tab title route-name route-view sync-color favorited?]}]
   (when (mobile-util/native-ios?)
-    (let [hidden? false
+    (let [hidden? (= tab "search")
           rtc-indicator? (and repo
                               (ldb/get-graph-rtc-uuid (db/get-db))
                               (user-handler/logged-in?))
           base {:title title
-                :hidden (boolean hidden?)}
+                :hidden hidden?}
           page? (= route-name :page)
           left-buttons (cond
                          (and (= tab "home") (nil? route-view))
