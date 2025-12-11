@@ -44,7 +44,7 @@
      :logseq.property/type {:title "Property type"
                             :schema {:type :keyword
                                      :hide? true}}
-     :logseq.property/hide? {:title "Hide this property"
+     :logseq.property/hide? {:title "Hide this property or page"
                              :schema {:type :checkbox
                                       :hide? true}}
      :logseq.property/public? {:title "Property public?"
@@ -487,7 +487,7 @@
                                            :hide? true
                                            :public? false}
                                   :queryable? true}
-     :logseq.property.asset/external-src {:title "External URL"
+     :logseq.property.asset/external-url {:title "External URL"
                                           :schema {:type :string
                                                    :hide? false
                                                    :public? true}

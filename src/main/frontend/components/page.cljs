@@ -189,14 +189,7 @@
                      (and (= id quick-add-page-id)
                           (user-handler/user-uuid)
                           (ldb/get-graph-rtc-uuid (db/get-db)))
-                     (let [user-id (uuid (user-handler/user-uuid))
-                           user-db-id (:db/id (db/entity [:block/uuid user-id]))]
-                       (if user-db-id
-                         (filter (fn [block]
-                                   (let [create-by-id (:db/id (:logseq.property/created-by-ref block))]
-                                     (or (= user-db-id create-by-id)
-                                         (nil? create-by-id)))) children)
-                         children))
+                     (editor-handler/get-user-quick-add-blocks)
 
                      (ldb/class? block)
                      (remove (fn [b] (contains? (set (map :db/id (:block/tags b))) (:db/id block))) children)
@@ -457,7 +450,7 @@
        "Set property"))]])
 
 (rum/defc db-page-title
-  [page {:keys [whiteboard-page? sidebar? container-id tag-dialog?]}]
+  [page {:keys [whiteboard-page? sidebar? journals? container-id tag-dialog?]}]
   (let [with-actions? (not config/publishing?)]
     [:div.ls-page-title.flex.flex-1.w-full.content.items-start.title
      {:class (when-not whiteboard-page? "title")
@@ -476,7 +469,7 @@
                          (state/get-current-repo)
                          (:db/id page)
                          :page)
-                        (util/mobile?)
+                        (and (util/mobile?) journals?)
                         (route-handler/redirect-to-page! (:block/uuid page))
                         :else
                         nil))))}
@@ -680,6 +673,7 @@
                    (db-page-title page
                                   {:whiteboard-page? whiteboard-page?
                                    :sidebar? sidebar?
+                                   :journals? journals?
                                    :container-id (:container-id state)
                                    :tag-dialog? tag-dialog?})
                    (page-title-cp page {:journal? journal?
@@ -771,7 +765,8 @@
                (when page-block
                  (when-not (or preview-or-sidebar? (:tag-dialog? option))
                    (if-let [page-uuid (and (not (:db/id page*))
-                                           (and page-name (not page-uuid?))
+                                           page-name
+                                           (not page-uuid?)
                                            (:block/uuid page-block))]
                      (route-handler/redirect-to-page! (str page-uuid) {:push false})
                      (route-handler/update-page-title-and-label! (state/get-route-match))))))
