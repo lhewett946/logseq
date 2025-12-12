@@ -1438,8 +1438,8 @@ Similar to re-frame subscriptions"
      (if (= mode "light")
        (util/set-theme-light)
        (util/set-theme-dark)))
-   (when (mobile-util/native-ios?)
-     (mobile-util/set-ios-interface-style! mode system-theme?))
+   (when (mobile-util/native-platform?)
+     (mobile-util/set-native-interface-style! mode system-theme?))
    (set-state! :ui/theme mode)
    (storage/set :ui/theme mode)))
 
@@ -1483,8 +1483,8 @@ Similar to re-frame subscriptions"
   []
   (let [mode (or (storage/get :ui/theme) "light")
         system-theme? (storage/get :ui/system-theme?)]
-    (when (mobile-util/native-ios?)
-      (mobile-util/set-ios-interface-style! mode system-theme?))
+    (when (mobile-util/native-platform?)
+      (mobile-util/set-native-interface-style! mode system-theme?))
     (when (and (not system-theme?)
                (mobile-util/native-platform?))
       (if (= mode "light")
