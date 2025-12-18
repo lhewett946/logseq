@@ -5,7 +5,7 @@ buildscript {
     ext {
         kotlin_version = '2.2.21'
         composeCompilerVersion = '2.0.1'
-        androidxActivityVersion = '1.12.1'
+        androidxActivityVersion = '1.12.2'
     }
     repositories {
         google()
